@@ -3,43 +3,31 @@ import logging
 import re
 from typing import List
 
+from utils import canonicalize, BOT_VERSION, IGNORED_ITEMS, STANDARD_ALIASES
+
 log = logging.getLogger(__name__)
 
-IGNORED_ITEMS = {
-    "Nothing",
-    "Recovery Heart",
-    "Piece of Heart",
-    "Heart Container",
-    "Small Magic Jar",
-    "Large Magic Jar",
-    "Deku Stick",
-    "Fairy",
-    "10 Arrows",
-    "30 Arrows",
-    "1 Bombchu",
-    "5 Bombchu",
-    "10 Bombchu",
-    "5 Bombs",
-    "10 Bombs",
-    "10 Deku Nuts",
-    "Green Rupee",
-    "Blue Rupee",
-    "Red Rupee",
-    "Purple Rupee",
-    "Silver Rupee",
-    "Gold Rupee",
-    "Green Potion",
-    "Owl Statue (Clock Town)",
-    "Owl Statue (Milk Road)",
-    "Owl Statue (Southern Swamp)",
-    "Owl Statue (Woodfall)",
-    "Owl Statue (Mountain Village)",
-    "Owl Statue (Snowhead)",
-    "Owl Statue (Great Bay)",
-    "Owl Statue (Zora Cape)",
-    "Owl Statue (Ikana Canyon)",
-    "Owl Statue (Stone Tower)",
+ITEMS_KEY = "items"
+ITEM_NAME_KEY = "name"
+ITEM_LOCATIONS_KEY = "locations"
+ALIASES_KEY = "aliases"
+VERSION_KEY = "version"
+"""
+Item data structure:
+{
+    VERSION_KEY: BOT_VERSION,
+    ALIASES_KEY: { "alias1": "item key", ...}
+    ITEM_LOCATIONS_KEY: {
+        "item1 key": {
+            ITEM_NAME_KEY: "original item name",
+            ITEM_LOCATIONS_KEY: [
+                ["location1 for player1", "location2 for player1", ...],
+                ["location1 for player2", "location2 for player2", ...],
+            ]
+        }
+    }
 }
+"""
 
 players_re = re.compile(r"players: (\d+)$")  # players: 14
 loc_list_re = re.compile(r"Location List \(\d+\)$")  # Location List (4410)
@@ -51,9 +39,21 @@ loc_re = re.compile(r"MM (.+): Player (\d+) ([^\n]+)$")  # MM Woodfall Entrance 
 def get_filename(guild_id):
     return f"{guild_id}-locations.json"
 
+
+def generate_aliases(item_name):
+    """Generates any aliases for an item given its original unmodified name."""
+    aliases = []
+    no_poss = item_name.replace("'s ", " ")
+    if no_poss != item_name:
+        aliases.append(canonicalize(no_poss))
+    return aliases
+
+
 def store_locations(loc_info: List[str], guild_id):
     player_count = 0
     locations = {}
+    aliases = {k: v for k, v in STANDARD_ALIASES.items()}
+
     current_world = None
     in_locs = False
     unparsed_lines = []
@@ -80,28 +80,39 @@ def store_locations(loc_info: List[str], guild_id):
 
         loc_match = loc_re.search(line)
         if loc_match:
-            item = loc_match.group(3)
-            if item.endswith(" (MM)"):
-                item = item[:-5]
-            if item not in IGNORED_ITEMS:
+            item_name = loc_match.group(3)
+            if item_name.endswith(" (MM)"):
+                item_name = item_name[:-5]
+            if item_name not in IGNORED_ITEMS:
                 player = int(loc_match.group(2)) - 1
                 loc = f"World {current_world} {loc_match.group(1)}"
-                item_key = item.lower()
+                item_key = canonicalize(item_name)
                 if item_key not in locations:
-                    locations[item_key] = {"name": item, "locations": [[] for _ in range(player_count)]}
-                locations[item_key]["locations"][player].append(loc)
+                    locations[item_key] = {
+                        ITEM_NAME_KEY: item_name,
+                        ITEM_LOCATIONS_KEY: [[] for _ in range(player_count)]
+                    }
+                locations[item_key][ITEM_LOCATIONS_KEY][player].append(loc)
+                for a in generate_aliases(item_name):
+                    aliases[a] = item_key
             continue
 
         if line.strip() and not area_re.search(line):
             unparsed_lines.append(line)
             log.info(f"Could not parse line: {line}")
 
+    filedata = {
+        VERSION_KEY: BOT_VERSION,
+        ITEMS_KEY: locations,
+        ALIASES_KEY: aliases if len(locations) else {},
+    }
+
     with open(get_filename(guild_id), "w") as f:
         log.debug("Storing location info to file")
-        json.dump(locations, f)
+        json.dump(filedata, f)
     if not len(locations):
         # Should likely still replace current locations file even in this case
-        return "Unknown error occurred. Could not extract locations."
+        return "Unknown error occurred. Could not extract data."
     if len(unparsed_lines):
         unparsed_lines_str = "\n".join(unparsed_lines)  # you can't put \ in an f-strings curly brace expr
         return (
@@ -111,9 +122,38 @@ def store_locations(loc_info: List[str], guild_id):
     return "Spoiler log successfully stored!"
 
 
-def get_locations(guild_id):
+def get_item_data(guild_id):
+    filename = get_filename(guild_id)
     try:
-        with open(get_filename(guild_id), "r") as f:
-            return json.load(f)
+        with open(filename, "r") as f:
+            item_data = json.load(f)
+        if item_data.get(VERSION_KEY) != BOT_VERSION:
+            item_data = update_version(item_data, filename)
+        return item_data
     except FileNotFoundError:
         return {}
+
+
+def update_version(item_data, filename):
+    if VERSION_KEY not in item_data:
+        # v0 was not numbered
+        log.info("Updating locations file from v0")
+        items = {}
+        aliases = {k: v for k, v in STANDARD_ALIASES.items()}
+        for item_key in item_data:
+            item_aliases = generate_aliases(item_data[item_key]["name"])
+            new_item_key = canonicalize(item_key)
+            items[new_item_key] = item_data[item_key]
+            for a in item_aliases:
+                aliases[a] = new_item_key
+        new_filedata = {
+            VERSION_KEY: BOT_VERSION,
+            ITEMS_KEY: items,
+            ALIASES_KEY: aliases,
+        }
+        with open(filename, "w") as f:
+            json.dump(new_filedata, f)
+        return new_filedata
+
+    log.info(f"No routine for updating filedata with version {item_data[VERSION_KEY]}")
+    return item_data

@@ -6,7 +6,8 @@ from discord.ext import commands
 from dotenv import load_dotenv
 
 from hint_handler import get_hint_response, set_cooldown
-from location_file_handler import get_locations, store_locations
+from location_file_handler import get_item_data, store_locations, ITEMS_KEY, ITEM_NAME_KEY
+from utils import canonicalize
 
 ADMIN_ROLE_NAME = "admin"
 
@@ -51,11 +52,11 @@ async def hint(
 def get_search_response(query: str, locs):
     if not len(locs):
         return "No location data is currently stored. (Use !set-log to upload a spoiler log.)"
-    query = query.lower()
+    query = canonicalize(query)
     matching_items = []
     for item, data in locs.items():
         if query in item:
-            matching_items.append(data["name"])
+            matching_items.append(data[ITEM_NAME_KEY])
     if len(matching_items):
         return "Matches: " + ", ".join(matching_items)
     else:
@@ -67,8 +68,8 @@ async def search(ctx, *, query=commands.parameter(description="Search query for 
     """
     Lists item names matching search query to help with hint requests. Items must have the query as an exact substring (case-insensitive) to match.
     """
-    locs = get_locations(ctx.message.guild.id)
-    await ctx.send(get_search_response(query, locs))
+    data = get_item_data(ctx.message.guild.id)
+    await ctx.send(get_search_response(query, data[ITEMS_KEY]))
 
 
 @bot.command(name="set-cooldown")
