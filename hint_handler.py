@@ -1,7 +1,6 @@
 import logging
 import re
 import time
-from typing import Optional
 
 from consts import BOT_VERSION, HINT_TIMES_FILENAME_SUFFIX, VERSION_KEY
 from item_location_handler import (
@@ -14,13 +13,85 @@ from utils import FileHandler, canonicalize
 
 log = logging.getLogger(__name__)
 
-DEFAULT_HINT_COOLDOWN_MIN = 30
+DEFAULT_HINT_COOLDOWN_SEC = 30 * 60
 COOLDOWN_KEY = "cooldown"
-MEMBERS_KEY = "members"
+ASKERS_KEY = "askers"
 
 player_re = re.compile(r"^@?player(\d+)$")  # player14, @Player14
 
-hint_times_fh = FileHandler(HINT_TIMES_FILENAME_SUFFIX)
+
+class HintTimes:
+    fh = FileHandler(HINT_TIMES_FILENAME_SUFFIX)
+
+    def __init__(self, guild_id):
+        self.guild_id = guild_id
+        try:
+            self._init_from_file()
+        except FileNotFoundError:
+            self.cooldown = DEFAULT_HINT_COOLDOWN_SEC
+            self.askers = {}
+
+    def _init_from_file(self):
+        data = HintTimes.fh.load(self.guild_id)
+        data_version = data.get(VERSION_KEY)
+        if data_version == BOT_VERSION:
+            self.cooldown = data[COOLDOWN_KEY]
+            self.askers = data[ASKERS_KEY]
+
+        # Data in file is outdated or corrupt. If it's a known old version, use it; otherwise ignore it.
+        elif data_version is None:
+            # v0 did not contain a version number and stored cooldown in minutes. It also had a bug where asker IDs went
+            # straight into the top level instead of under key "members" (now "askers"), so the members dict is empty.
+            log.info("Updating hint timestamps file from v0")
+            self.cooldown = data[COOLDOWN_KEY] * 60
+            self.askers = {}
+            oldest_relevant_ask_time = time.time() - self.cooldown
+            for asker_id, ask_time in data.items():
+                if isinstance(ask_time, float) and ask_time > oldest_relevant_ask_time:
+                    self.askers[asker_id] = ask_time
+            self.save()
+        else:
+            log.info(f"No protocol for updating filedata with version {data_version}")
+            raise FileNotFoundError  # will result in default cooldown and no saved askers
+
+    def save(self):
+        filedata = {
+            VERSION_KEY: BOT_VERSION,
+            COOLDOWN_KEY: self.cooldown,
+            ASKERS_KEY: self.askers,
+        }
+        HintTimes.fh.store(filedata, self.guild_id)
+
+    def attempt_hint(self, asker_id: str) -> float:
+        """
+        Returns seconds remaining before the given member can get another hint, or 0 if member is currently eligible.
+        When this function returns 0, it also sets the member's last hint time to the current time.
+        """
+        current_time = time.time()
+        last_hint_time = self.askers.get(asker_id, 0)
+        wait_time_sec = max(self.cooldown - (current_time - last_hint_time), 0)
+        if wait_time_sec == 0:
+            # Hint is allowed. Record new hint timestamp.
+            self.askers[asker_id] = current_time
+            self.save()
+        return wait_time_sec
+
+    def set_cooldown(self, cooldown_min):
+        self.cooldown = cooldown_min * 60
+        self.save()
+
+
+# Never contains more than the most-recently-used HintTimes.
+# Don't want to keep them all around because the bot could be running for a long time.
+cached_hint_times: list[HintTimes] = []
+
+
+def get_hint_times(guild_id):
+    if not len(cached_hint_times):
+        cached_hint_times.append(HintTimes(guild_id))
+    elif cached_hint_times[0].guild_id != guild_id:
+        cached_hint_times[0] = HintTimes(guild_id)
+    return cached_hint_times[0]
 
 
 def get_player_number(player: str) -> int:
@@ -55,9 +126,11 @@ def get_hint_response(player: str, item: str, author_id: int, guild_id) -> str:
     if not len(player_locs_for_item):
         return f"For some reason there are no locations listed for {player}'s {item}........ sorry!!! There must be something wrong with me :( Please report."
 
-    hint_wait_time = get_hint_wait_time(author_id, guild_id)
-    if hint_wait_time is not None:
-        return f"Please chill for another {hint_wait_time}"
+    hint_times = get_hint_times(guild_id)
+    # Convert author ID for serialization; JSON keys must be strings
+    hint_wait_time = hint_times.attempt_hint(str(author_id))
+    if hint_wait_time:
+        return f"Please chill for another {format_wait_time(int(hint_wait_time))}"
 
     return "\n".join(player_locs_for_item)
 
@@ -70,89 +143,15 @@ def format_wait_time(wait_time_sec: int) -> str:
     return f"{hr}:{m:02}:{s:02}"
 
 
-def get_hint_wait_time(member_id: int, guild_id) -> Optional[str]:
-    """
-    Returns remaining wait time before the given member can get another hint, or None if member is currently eligible.
-    When this function returns None, it also sets the member's last hint time to the current time.
-    """
-    log.debug("finding hint wait time")
-    current_time = time.time()
-    try:
-        hint_times = get_hint_times_data(guild_id)
-    except FileNotFoundError:
-        hint_times = {
-            VERSION_KEY: BOT_VERSION,
-            COOLDOWN_KEY: DEFAULT_HINT_COOLDOWN_MIN,
-            MEMBERS_KEY: {},
-        }
-
-    member_id = str(member_id)  # because JSON keys must be strings
-    hint_cooldown_sec = hint_times[COOLDOWN_KEY] * 60
-    last_hint_time = hint_times[MEMBERS_KEY].get(member_id)
-    if last_hint_time is not None and current_time - last_hint_time < hint_cooldown_sec:
-        log.debug("member asked for hint too recently!")
-        wait_time_sec = hint_cooldown_sec - (current_time - last_hint_time)
-        return format_wait_time(int(wait_time_sec))
-
-    # Hint is allowed. Record new hint timestamp
-    hint_times[MEMBERS_KEY][member_id] = current_time
-    hint_times_fh.store(hint_times, guild_id)
-    return None
-
-
 def set_cooldown(cooldown_min: int, guild_id):
     response = None
     if cooldown_min < 0:
         response = "I don't know what you're playing at, but I will just set it to 0..."
         cooldown_min = 0
 
-    try:
-        hint_times = get_hint_times_data(guild_id)
-        if hint_times.get(COOLDOWN_KEY) == cooldown_min:
-            return f"Cooldown time is already set to {cooldown_min} minutes."
-        hint_times[COOLDOWN_KEY] = cooldown_min
-    except FileNotFoundError:
-        hint_times = {
-            VERSION_KEY: BOT_VERSION,
-            COOLDOWN_KEY: cooldown_min,
-            MEMBERS_KEY: {},
-        }
+    hint_times = get_hint_times(guild_id)
+    if hint_times.cooldown // 60 == cooldown_min:
+        return f"Cooldown time is already set to {cooldown_min} minutes."
 
-    hint_times_fh.store(hint_times, guild_id)
+    hint_times.set_cooldown(cooldown_min)
     return response or f"Done, cooldown time set to {cooldown_min} minutes."
-
-
-def get_hint_times_data(guild_id):
-    hint_times_data = hint_times_fh.load(guild_id)
-    if hint_times_data.get(VERSION_KEY) != BOT_VERSION:
-        return update_version(hint_times_data, guild_id)
-    return hint_times_data
-
-
-def update_version(hint_times_file_data, guild_id):
-    if VERSION_KEY not in hint_times_file_data:
-        # v0 did not contain a version number
-        log.info("Updating hint times file from v0")
-        members = {}
-        cooldown = hint_times_file_data[COOLDOWN_KEY]
-        oldest_relevant_ask_time = time.time() - (cooldown * 60)
-        # V0 had a bug where asker IDs went straight in the top level instead of under MEMBERS_KEY
-        for asker_id, ask_time in hint_times_file_data.items():
-            if (
-                asker_id != COOLDOWN_KEY
-                and asker_id != MEMBERS_KEY
-                and ask_time > oldest_relevant_ask_time
-            ):
-                members[asker_id] = ask_time
-        new_filedata = {
-            VERSION_KEY: BOT_VERSION,
-            COOLDOWN_KEY: cooldown,
-            MEMBERS_KEY: members,
-        }
-        hint_times_fh.store(new_filedata, guild_id)
-        return new_filedata
-
-    log.info(
-        f"No protocol for updating filedata with version {hint_times_file_data[VERSION_KEY]}"
-    )
-    return hint_times_file_data

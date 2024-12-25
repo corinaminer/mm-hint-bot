@@ -1,4 +1,5 @@
 import os
+import time
 
 import pytest
 
@@ -9,11 +10,11 @@ from consts import (
     VERSION_KEY,
 )
 from hint_handler import (
+    ASKERS_KEY,
     COOLDOWN_KEY,
-    DEFAULT_HINT_COOLDOWN_MIN,
-    MEMBERS_KEY,
+    DEFAULT_HINT_COOLDOWN_SEC,
+    HintTimes,
     get_hint_response,
-    get_hint_times_data,
 )
 from item_location_handler import (
     ALIASES_KEY,
@@ -115,16 +116,16 @@ def test_get_hint_response(hint_times_fh, populate_item_locs):
 
     # Successful hint should trigger creation of hint timestamps file, and result in cooldown response
     hint_times_data = hint_times_fh.load(test_guild_id)
-    assert hint_times_data[COOLDOWN_KEY] == DEFAULT_HINT_COOLDOWN_MIN
-    assert hint_times_data[MEMBERS_KEY].keys() == {"0"}
+    assert hint_times_data[COOLDOWN_KEY] == DEFAULT_HINT_COOLDOWN_SEC
+    assert hint_times_data[ASKERS_KEY].keys() == {"0"}
     response = get_hint_response("player1", item_name, 0, test_guild_id)
-    assert response.startswith("Please chill for another 0:29:5")
+    assert response[:-1] == "Please chill for another 0:29:5"
 
     # New author should be successful with the same hint request, once
     response = get_hint_response("player1", item_name, 1, test_guild_id)
     assert response == player1_locs[0]
     response = get_hint_response("player1", item_name, 1, test_guild_id)
-    assert response.startswith("Please chill for another 0:29:5")
+    assert response[:-1] == "Please chill for another 0:29:5"
 
     # Test response with item key and alias
     response = get_hint_response("player1", item_key, 2, test_guild_id)
@@ -137,25 +138,47 @@ def test_get_hint_response(hint_times_fh, populate_item_locs):
     assert response == "\n".join(player2_locs)  # player2 has two locations
 
 
-def test_update_version(hint_times_fh):
-    import time
-
-    cooldown = 101
+def test_update_version_v0(hint_times_fh):
+    cooldown = DEFAULT_HINT_COOLDOWN_SEC * 2  # purposely non-default
     now = time.time()
-    outdated_hint_time = now - (cooldown * 60) - 1
-    relevant_hint_time = now - ((cooldown - 1) * 60)
+    outdated_hint_time = now - cooldown - 1
+    relevant_hint_time = now - cooldown + 60
     v0_hint_times = {
-        COOLDOWN_KEY: cooldown,
-        MEMBERS_KEY: {},
+        "cooldown": cooldown // 60,  # v0 cooldown was in minutes
+        "members": {},
         "0": outdated_hint_time,
         "1": relevant_hint_time,
     }
     hint_times_fh.store(v0_hint_times, test_guild_id)
 
+    expected_askers = {"1": relevant_hint_time}
     expected_updated_data = {
         VERSION_KEY: BOT_VERSION,
         COOLDOWN_KEY: cooldown,
-        MEMBERS_KEY: {"1": relevant_hint_time},
+        ASKERS_KEY: expected_askers,
     }
-    assert get_hint_times_data(test_guild_id) == expected_updated_data
+    hint_times = HintTimes(test_guild_id)
+    assert hint_times.cooldown == cooldown and hint_times.askers == expected_askers
+    assert hint_times_fh.load(test_guild_id) == expected_updated_data
+
+
+def test_unknown_version(hint_times_fh):
+    # If version is unknown, HintTimes should fall back on default values
+    hint_times = {
+        VERSION_KEY: "foo",
+        COOLDOWN_KEY: 101,
+        ASKERS_KEY: {
+            "0": time.time(),
+        },
+    }
+    hint_times_fh.store(hint_times, test_guild_id)
+
+    expected_updated_data = {
+        VERSION_KEY: BOT_VERSION,
+        COOLDOWN_KEY: DEFAULT_HINT_COOLDOWN_SEC,
+        ASKERS_KEY: {},
+    }
+    hint_times = HintTimes(test_guild_id)
+    assert hint_times.cooldown == DEFAULT_HINT_COOLDOWN_SEC and hint_times.askers == {}
+    hint_times.save()
     assert hint_times_fh.load(test_guild_id) == expected_updated_data
