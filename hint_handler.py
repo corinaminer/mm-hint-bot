@@ -1,8 +1,8 @@
 import json
 import logging
-import math
 import re
 import time
+from typing import Optional
 
 from location_file_handler import get_item_data, ALIASES_KEY, ITEM_LOCATIONS_KEY, ITEMS_KEY
 from utils import canonicalize
@@ -43,8 +43,8 @@ def get_hint_response(player: str, item: str, author_id: int, guild_id) -> str:
         return f"Invalid player number {player_number + 1}."
 
     hint_wait_time = get_hint_wait_time(author_id, guild_id)
-    if hint_wait_time:
-        return f"Whoa nelly! You've got {hint_wait_time} more minute{'s' if hint_wait_time != 1 else ''} before your next hint -- hold your horses!!"
+    if hint_wait_time is not None:
+        return f"Please chill for another {hint_wait_time}"
 
     player_locs_for_item = item_data[ITEM_LOCATIONS_KEY][player_number]
     if not len(player_locs_for_item):
@@ -57,10 +57,18 @@ def get_hint_timestamps_filename(guild_id):
     return f"{guild_id}-hint_timestamps.json"
 
 
-def get_hint_wait_time(member_id: int, guild_id) -> int:
+def format_wait_time(wait_time_sec: int) -> str:
+    m = wait_time_sec // 60
+    s = wait_time_sec % 60
+    hr = m // 60
+    m %= 60
+    return f"{hr}:{m:02}:{s:02}"
+
+
+def get_hint_wait_time(member_id: int, guild_id) -> Optional[str]:
     """
-    Returns remaining wait time before the given member can get another hint. Hints are permitted every 30 minutes.
-    If the wait time is 0, the current time is recorded as the last hint timestamp for this member.
+    Returns remaining wait time before the given member can get another hint, or None if member is currently eligible.
+    When this function returns None, it also sets the member's last hint time to the current time.
     """
     log.debug("finding hint wait time")
     current_time = time.time()
@@ -77,13 +85,13 @@ def get_hint_wait_time(member_id: int, guild_id) -> int:
     if last_hint_time is not None and current_time - last_hint_time < hint_cooldown_sec:
         log.debug("member asked for hint too recently!")
         wait_time_sec = hint_cooldown_sec - (current_time - last_hint_time)
-        return math.ceil(wait_time_sec / 60)
+        return format_wait_time(int(wait_time_sec))
 
     # Hint is allowed. Record new hint timestamp
     hint_times[member_id] = current_time
     with open(filename, "w") as f:
         json.dump(hint_times, f)
-    return 0
+    return None
 
 
 def set_cooldown(cooldown_min: int, guild_id):
