@@ -1,9 +1,8 @@
-import json
 import logging
 import re
 from typing import List
 
-from utils import canonicalize, BOT_VERSION, IGNORED_ITEMS, STANDARD_ALIASES
+from utils import canonicalize, FileHandler, BOT_VERSION, IGNORED_ITEMS, STANDARD_ALIASES
 
 log = logging.getLogger(__name__)
 
@@ -35,9 +34,7 @@ world_re = re.compile(r"World (\d+) \(\d+\)$")  # World 1 (490)
 area_re = re.compile(r"(.+) \(\d+\):$")  # Tingle (6):
 loc_re = re.compile(r"MM (.+): Player (\d+) ([^\n]+)$")  # MM Woodfall Entrance Chest: Player 7 Postman's Hat
 
-
-def get_filename(guild_id):
-    return f"{guild_id}-locations.json"
+item_locations_fh = FileHandler("locations")
 
 
 def generate_aliases(item_name):
@@ -107,9 +104,8 @@ def store_locations(loc_info: List[str], guild_id):
         ALIASES_KEY: aliases if len(locations) else {},
     }
 
-    with open(get_filename(guild_id), "w") as f:
-        log.debug("Storing location info to file")
-        json.dump(filedata, f)
+    log.debug("Storing location info to file")
+    item_locations_fh.store(filedata, guild_id)
     if not len(locations):
         # Should likely still replace current locations file even in this case
         return "Unknown error occurred. Could not extract data."
@@ -123,18 +119,16 @@ def store_locations(loc_info: List[str], guild_id):
 
 
 def get_item_data(guild_id):
-    filename = get_filename(guild_id)
     try:
-        with open(filename, "r") as f:
-            item_data = json.load(f)
-        if item_data.get(VERSION_KEY) != BOT_VERSION:
-            item_data = update_version(item_data, filename)
-        return item_data
+        item_data = item_locations_fh.load(guild_id)
     except FileNotFoundError:
         return {}
+    if item_data.get(VERSION_KEY) != BOT_VERSION:
+        item_data = update_version(item_data, guild_id)
+    return item_data
 
 
-def update_version(item_data, filename):
+def update_version(item_data, guild_id):
     if VERSION_KEY not in item_data:
         # v0 was not numbered
         log.info("Updating locations file from v0")
@@ -151,8 +145,7 @@ def update_version(item_data, filename):
             ITEMS_KEY: items,
             ALIASES_KEY: aliases,
         }
-        with open(filename, "w") as f:
-            json.dump(new_filedata, f)
+        item_locations_fh.store(new_filedata, guild_id)
         return new_filedata
 
     log.info(f"No routine for updating filedata with version {item_data[VERSION_KEY]}")

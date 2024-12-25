@@ -1,17 +1,18 @@
-import json
 import logging
 import re
 import time
 from typing import Optional
 
-from location_file_handler import get_item_data, ALIASES_KEY, ITEM_LOCATIONS_KEY, ITEMS_KEY
-from utils import canonicalize
+from item_location_handler import get_item_data, ALIASES_KEY, ITEM_LOCATIONS_KEY, ITEMS_KEY
+from utils import canonicalize, FileHandler
 
 log = logging.getLogger(__name__)
 
 DEFAULT_HINT_COOLDOWN_MIN = 30
 
 player_re = re.compile(r"^@?player(\d+)$")  # player14, @Player14
+
+hint_times_fh = FileHandler("hint_timestamps")
 
 
 def get_player_number(player: str) -> int:
@@ -53,10 +54,6 @@ def get_hint_response(player: str, item: str, author_id: int, guild_id) -> str:
         return "\n".join(player_locs_for_item)
 
 
-def get_hint_timestamps_filename(guild_id):
-    return f"{guild_id}-hint_timestamps.json"
-
-
 def format_wait_time(wait_time_sec: int) -> str:
     m = wait_time_sec // 60
     s = wait_time_sec % 60
@@ -72,10 +69,8 @@ def get_hint_wait_time(member_id: int, guild_id) -> Optional[str]:
     """
     log.debug("finding hint wait time")
     current_time = time.time()
-    filename = get_hint_timestamps_filename(guild_id)
     try:
-        with open(filename, "r") as f:
-            hint_times = json.load(f)
+        hint_times = hint_times_fh.load(guild_id)
     except FileNotFoundError:
         hint_times = {"cooldown": DEFAULT_HINT_COOLDOWN_MIN, "members": {}}
 
@@ -89,8 +84,7 @@ def get_hint_wait_time(member_id: int, guild_id) -> Optional[str]:
 
     # Hint is allowed. Record new hint timestamp
     hint_times[member_id] = current_time
-    with open(filename, "w") as f:
-        json.dump(hint_times, f)
+    hint_times_fh.store(hint_times, guild_id)
     return None
 
 
@@ -100,14 +94,13 @@ def set_cooldown(cooldown_min: int, guild_id):
         response = "I don't know what you're playing at, but I will just set it to 0..."
         cooldown_min = 0
 
-    filename = get_hint_timestamps_filename(guild_id)
     try:
-        with open(filename, "r") as f:
-            hint_times = json.load(f)
+        hint_times = hint_times_fh.load(guild_id)
+        if hint_times.get("cooldown") == cooldown_min:
+            return f"Cooldown time is already set to {cooldown_min} minutes."
         hint_times["cooldown"] = cooldown_min
     except FileNotFoundError:
         hint_times = {"cooldown": cooldown_min, "members": {}}
 
-    with open(filename, "w") as f:
-        json.dump(hint_times, f)
+    hint_times_fh.store(hint_times, guild_id)
     return response if response is not None else f"Done, cooldown time set to {cooldown_min} minutes."

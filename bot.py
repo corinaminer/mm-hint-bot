@@ -6,7 +6,7 @@ from discord.ext import commands
 from dotenv import load_dotenv
 
 from hint_handler import get_hint_response, set_cooldown
-from location_file_handler import get_item_data, store_locations, ITEMS_KEY, ITEM_NAME_KEY
+from item_location_handler import get_item_data, store_locations, ITEMS_KEY, ITEM_NAME_KEY
 from utils import canonicalize
 
 ADMIN_ROLE_NAME = "admin"
