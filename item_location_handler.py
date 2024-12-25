@@ -2,7 +2,8 @@ import logging
 import re
 from typing import List
 
-from utils import canonicalize, FileHandler, BOT_VERSION, IGNORED_ITEMS, STANDARD_ALIASES
+from consts import BOT_VERSION, IGNORED_ITEMS, STANDARD_ALIASES
+from utils import canonicalize, FileHandler
 
 log = logging.getLogger(__name__)
 
