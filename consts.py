@@ -1,4 +1,8 @@
 BOT_VERSION = 1
+VERSION_KEY = "version"
+
+HINT_TIMES_FILENAME_SUFFIX = "hint_timestamps"
+ITEM_LOCATIONS_FILENAME_SUFFIX = "locations"
 
 IGNORED_ITEMS = {
     "Nothing",
