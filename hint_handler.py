@@ -2,26 +2,21 @@ import logging
 import re
 import time
 
-from consts import BOT_VERSION, HINT_TIMES_FILENAME_SUFFIX, VERSION_KEY
-from item_location_handler import (
-    ALIASES_KEY,
-    ITEM_LOCATIONS_KEY,
-    ITEMS_KEY,
-    get_item_location_data,
-)
-from utils import FileHandler, canonicalize
+from consts import BOT_VERSION, VERSION_KEY
+from item_location_handler import get_item_locations
+from utils import FileHandler
 
 log = logging.getLogger(__name__)
 
 DEFAULT_HINT_COOLDOWN_SEC = 30 * 60
-COOLDOWN_KEY = "cooldown"
-ASKERS_KEY = "askers"
 
 player_re = re.compile(r"^@?player(\d+)$")  # player14, @Player14
 
 
 class HintTimes:
-    fh = FileHandler(HINT_TIMES_FILENAME_SUFFIX)
+    fh = FileHandler("hint_timestamps")
+    COOLDOWN_KEY = "cooldown"
+    ASKERS_KEY = "askers"
 
     def __init__(self, guild_id):
         self.guild_id = guild_id
@@ -35,15 +30,15 @@ class HintTimes:
         data = HintTimes.fh.load(self.guild_id)
         data_version = data.get(VERSION_KEY)
         if data_version == BOT_VERSION:
-            self.cooldown = data[COOLDOWN_KEY]
-            self.askers = data[ASKERS_KEY]
+            self.cooldown = data[HintTimes.COOLDOWN_KEY]
+            self.askers = data[HintTimes.ASKERS_KEY]
 
         # Data in file is outdated or corrupt. If it's a known old version, use it; otherwise ignore it.
         elif data_version is None:
             # v0 did not contain a version number and stored cooldown in minutes. It also had a bug where asker IDs went
             # straight into the top level instead of under key "members" (now "askers"), so the members dict is empty.
             log.info("Updating hint timestamps file from v0")
-            self.cooldown = data[COOLDOWN_KEY] * 60
+            self.cooldown = data[HintTimes.COOLDOWN_KEY] * 60
             self.askers = {}
             oldest_relevant_ask_time = time.time() - self.cooldown
             for asker_id, ask_time in data.items():
@@ -57,8 +52,8 @@ class HintTimes:
     def save(self):
         filedata = {
             VERSION_KEY: BOT_VERSION,
-            COOLDOWN_KEY: self.cooldown,
-            ASKERS_KEY: self.askers,
+            HintTimes.COOLDOWN_KEY: self.cooldown,
+            HintTimes.ASKERS_KEY: self.askers,
         }
         HintTimes.fh.store(filedata, self.guild_id)
 
@@ -97,7 +92,7 @@ def get_hint_times(guild_id):
 def get_player_number(player: str) -> int:
     match = player_re.search(player.lower())
     if match:
-        return int(match.group(1)) - 1
+        return int(match.group(1))
     raise ValueError()
 
 
@@ -107,24 +102,17 @@ def get_hint_response(player: str, item: str, author_id: int, guild_id) -> str:
     except ValueError:
         return f'Unrecognized player {player}. (Did you format without spaces as in "player5"?)'
 
-    data = get_item_location_data(guild_id)
-    locs = data.get(ITEMS_KEY, {})
-    if not len(locs):
+    try:
+        item_name, player_locs_for_item = get_item_locations(guild_id).get_locations(
+            player_number, item
+        )
+    except FileNotFoundError:
         return "No data is currently stored. (Use !set-log to upload a spoiler log.)"
+    except ValueError as e:
+        return e.args[0]  # message
 
-    canonical_item = canonicalize(item)
-    if canonical_item not in locs:
-        canonical_item = data[ALIASES_KEY].get(canonical_item)
-    if canonical_item is None:
-        return f"Item {item} not recognized. (Not case-sensitive.) Try !search <keyword> to find it!"
-
-    item_data = locs[canonical_item]
-    if player_number < 0 or player_number >= len(item_data[ITEM_LOCATIONS_KEY]):
-        return f"Invalid player number {player_number + 1}."
-
-    player_locs_for_item = item_data[ITEM_LOCATIONS_KEY][player_number]
     if not len(player_locs_for_item):
-        return f"For some reason there are no locations listed for {player}'s {item}........ sorry!!! There must be something wrong with me :( Please report."
+        return f"For some reason there are no locations listed for {player}'s {item_name}........ sorry!!! There must be something wrong with me :( Please report."
 
     hint_times = get_hint_times(guild_id)
     # Convert author ID for serialization; JSON keys must be strings
