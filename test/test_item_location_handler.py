@@ -15,12 +15,12 @@ v0_item_location_data = {
 
 v1_items = {
     "kafeis mask": {
-        ItemLocations.ITEM_NAME_KEY: "Kafei's Mask",
-        ItemLocations.ITEM_LOCATIONS_KEY: [["location1"], ["location2"]],
+        ItemLocations.NAME_KEY: "Kafei's Mask",
+        ItemLocations.RESULTS_KEY: [["location1"], ["location2"]],
     },
     "mask of scents": {
-        "name": "Mask of Scents",
-        "locations": [["location3"], ["location4"]],
+        ItemLocations.NAME_KEY: "Mask of Scents",
+        ItemLocations.RESULTS_KEY: [["location3"], ["location4"]],
     },
 }
 v1_aliases = {
@@ -29,8 +29,7 @@ v1_aliases = {
 }
 v1_item_location_data = {
     VERSION_KEY: BOT_VERSION,
-    ItemLocations.ITEMS_KEY: v1_items,
-    ItemLocations.ALIASES_KEY: v1_aliases,
+    ItemLocations.DATA_KEY: v1_items,
 }
 
 
@@ -68,8 +67,7 @@ def test_unknown_version(fh):
     # If version is unknown, ItemLocations should act like no file exists
     invalid_version_data = {
         VERSION_KEY: "foo",
-        ItemLocations.ITEMS_KEY: v1_items,
-        ItemLocations.ALIASES_KEY: v1_aliases,
+        ItemLocations.DATA_KEY: v1_items,
     }
     fh.store(invalid_version_data, test_guild_id)
 
@@ -78,6 +76,5 @@ def test_unknown_version(fh):
     item_locations.save()
     assert fh.load(test_guild_id) == {
         VERSION_KEY: BOT_VERSION,
-        ItemLocations.ITEMS_KEY: {},
-        ItemLocations.ALIASES_KEY: {},
+        ItemLocations.DATA_KEY: {},
     }

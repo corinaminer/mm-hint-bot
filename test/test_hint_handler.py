@@ -23,8 +23,8 @@ player2_locs = ["Location 2", "Location 3"]
 player3_locs = []
 item_locs_dict = {
     item_key: {
-        ItemLocations.ITEM_NAME_KEY: item_name,
-        ItemLocations.ITEM_LOCATIONS_KEY: [
+        ItemLocations.NAME_KEY: item_name,
+        ItemLocations.RESULTS_KEY: [
             player1_locs,
             player2_locs,
             player3_locs,

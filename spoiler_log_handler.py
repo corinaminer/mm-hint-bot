@@ -67,12 +67,12 @@ def handle_spoiler_log(
                         item_key = canonicalize(item_name)
                         if item_key not in item_locations:
                             item_locations[item_key] = {
-                                ItemLocations.ITEM_NAME_KEY: item_name,
-                                ItemLocations.ITEM_LOCATIONS_KEY: [
+                                ItemLocations.NAME_KEY: item_name,
+                                ItemLocations.RESULTS_KEY: [
                                     [] for _ in range(player_count)
                                 ],
                             }
-                        item_locations[item_key][ItemLocations.ITEM_LOCATIONS_KEY][
+                        item_locations[item_key][ItemLocations.RESULTS_KEY][
                             player
                         ].append(loc)
                     continue
