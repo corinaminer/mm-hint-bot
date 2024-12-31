@@ -3,7 +3,7 @@ import re
 import time
 
 from consts import BOT_VERSION, VERSION_KEY
-from item_location_handler import get_item_locations
+from item_location_handler import ItemLocations
 from utils import FileHandler
 
 log = logging.getLogger(__name__)
@@ -76,19 +76,6 @@ class HintTimes:
         self.save()
 
 
-# Never contains more than the most-recently-used HintTimes.
-# Don't want to keep them all around because the bot could be running for a long time.
-cached_hint_times: list[HintTimes] = []
-
-
-def get_hint_times(guild_id):
-    if not len(cached_hint_times):
-        cached_hint_times.append(HintTimes(guild_id))
-    elif cached_hint_times[0].guild_id != guild_id:
-        cached_hint_times[0] = HintTimes(guild_id)
-    return cached_hint_times[0]
-
-
 def get_player_number(player: str) -> int:
     match = player_re.search(player.lower())
     if match:
@@ -96,14 +83,20 @@ def get_player_number(player: str) -> int:
     raise ValueError()
 
 
-def get_hint_response(player: str, item: str, author_id: int, guild_id) -> str:
+def get_hint_response(
+    player: str,
+    item: str,
+    author_id: int,
+    hint_times: HintTimes,
+    item_locations: ItemLocations,
+) -> str:
     try:
         player_number = get_player_number(player)
     except ValueError:
         return f'Unrecognized player {player}. (Did you format without spaces as in "player5"?)'
 
     try:
-        item_name, player_locs_for_item = get_item_locations(guild_id).get_locations(
+        item_name, player_locs_for_item = item_locations.get_locations(
             player_number, item
         )
     except FileNotFoundError:
@@ -114,9 +107,9 @@ def get_hint_response(player: str, item: str, author_id: int, guild_id) -> str:
     if not len(player_locs_for_item):
         return f"For some reason there are no locations listed for {player}'s {item_name}........ sorry!!! There must be something wrong with me :( Please report."
 
-    hint_times = get_hint_times(guild_id)
     # Convert author ID for serialization; JSON keys must be strings
     hint_wait_time = hint_times.attempt_hint(str(author_id))
+    # TODO Bring back hold your horses plus flavors
     if hint_wait_time:
         return f"Please chill for another {format_wait_time(int(hint_wait_time))}"
 
@@ -131,13 +124,12 @@ def format_wait_time(wait_time_sec: int) -> str:
     return f"{hr}:{m:02}:{s:02}"
 
 
-def set_cooldown(cooldown_min: int, guild_id):
+def set_cooldown(cooldown_min: int, hint_times: HintTimes):
     response = None
     if cooldown_min < 0:
         response = "I don't know what you're playing at, but I will just set it to 0..."
         cooldown_min = 0
 
-    hint_times = get_hint_times(guild_id)
     if hint_times.cooldown // 60 == cooldown_min:
         return f"Cooldown time is already set to {cooldown_min} minutes."
 

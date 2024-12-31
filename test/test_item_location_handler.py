@@ -1,7 +1,7 @@
 import pytest
 
 from consts import BOT_VERSION, VERSION_KEY
-from item_location_handler import ItemLocations, get_item_locations, set_item_locations
+from item_location_handler import ItemLocations
 
 test_guild_id = "test-guild-id"
 
@@ -49,8 +49,7 @@ def test_find_matching_items(fh):
     with pytest.raises(FileNotFoundError):
         item_locs.find_matching_items("foo")
 
-    set_item_locations(v1_items, test_guild_id)
-    item_locs = get_item_locations(test_guild_id)
+    item_locs = ItemLocations(test_guild_id, v1_items)
     assert item_locs.find_matching_items("foo") == []
     assert item_locs.find_matching_items("kafeis") == ["Kafei's Mask"]
     assert item_locs.find_matching_items("Kafei's") == ["Kafei's Mask"]

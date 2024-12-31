@@ -5,7 +5,7 @@ import pytest
 
 from consts import BOT_VERSION, VERSION_KEY
 from hint_handler import DEFAULT_HINT_COOLDOWN_SEC, HintTimes, get_hint_response
-from item_location_handler import ItemLocations, set_item_locations
+from item_location_handler import ItemLocations
 
 test_guild_id = "test-guild-id"
 
@@ -13,9 +13,6 @@ test_guild_id = "test-guild-id"
 @pytest.fixture
 def hint_times_fh():
     yield HintTimes.fh
-    filename = HintTimes.fh._get_filename(test_guild_id)
-    if os.path.exists(filename):
-        os.remove(filename)
 
 
 item_key = "kafeis mask"
@@ -24,59 +21,56 @@ item_alias = "kafei mask"
 player1_locs = ["Location 1"]
 player2_locs = ["Location 2", "Location 3"]
 player3_locs = []
+item_locs_dict = {
+    item_key: {
+        ItemLocations.ITEM_NAME_KEY: item_name,
+        ItemLocations.ITEM_LOCATIONS_KEY: [
+            player1_locs,
+            player2_locs,
+            player3_locs,
+        ],
+    }
+}
 
 
-@pytest.fixture
-def populate_item_locs():
-    # Clear any existing ItemLocations first
-    set_item_locations({}, test_guild_id)
+@pytest.fixture(autouse=True)
+def cleanup():
+    yield
 
-    def store_locations():
-        set_item_locations(
-            {
-                item_key: {
-                    ItemLocations.ITEM_NAME_KEY: item_name,
-                    ItemLocations.ITEM_LOCATIONS_KEY: [
-                        player1_locs,
-                        player2_locs,
-                        player3_locs,
-                    ],
-                }
-            },
-            test_guild_id,
-        )
-
-    yield store_locations
-
-    filename = ItemLocations.fh._get_filename(test_guild_id)
-    if os.path.exists(filename):
-        os.remove(filename)
+    item_locs_filename = ItemLocations.fh._get_filename(test_guild_id)
+    hint_times_filename = HintTimes.fh._get_filename(test_guild_id)
+    if os.path.exists(item_locs_filename):
+        os.remove(item_locs_filename)
+    if os.path.exists(hint_times_filename):
+        os.remove(hint_times_filename)
 
 
-def test_get_hint_failures(hint_times_fh, populate_item_locs):
-    response = get_hint_response("playerx", "foo", 0, test_guild_id)
+def test_get_hint_failures(hint_times_fh):
+    hint_times = HintTimes(test_guild_id)
+    item_locs = ItemLocations(test_guild_id, {})
+    response = get_hint_response("playerx", "foo", 0, hint_times, item_locs)
     assert (
         response
         == f'Unrecognized player playerx. (Did you format without spaces as in "player5"?)'
     )
 
-    response = get_hint_response("player1", "foo", 0, test_guild_id)
+    response = get_hint_response("player1", "foo", 0, hint_times, item_locs)
     assert (
         response
         == "No data is currently stored. (Use !set-log to upload a spoiler log.)"
     )
 
-    populate_item_locs()
+    item_locs = ItemLocations(test_guild_id, item_locs_dict)
 
-    response = get_hint_response("player1", "foo", 0, test_guild_id)
+    response = get_hint_response("player1", "foo", 0, hint_times, item_locs)
     assert response == "Item foo not recognized. Try !search <keyword> to find it!"
 
-    response = get_hint_response("player0", item_key, 0, test_guild_id)
+    response = get_hint_response("player0", item_key, 0, hint_times, item_locs)
     assert response == "Invalid player number 0."
-    response = get_hint_response("player4", item_key, 0, test_guild_id)
+    response = get_hint_response("player4", item_key, 0, hint_times, item_locs)
     assert response == "Invalid player number 4."
 
-    response = get_hint_response("player3", item_key, 0, test_guild_id)
+    response = get_hint_response("player3", item_key, 0, hint_times, item_locs)
     assert (
         response
         == f"For some reason there are no locations listed for player3's {item_name}........ sorry!!! There must be something wrong with me :( Please report."
@@ -87,34 +81,35 @@ def test_get_hint_failures(hint_times_fh, populate_item_locs):
         hint_times_fh.load(test_guild_id)
 
 
-def test_get_hint_response(hint_times_fh, populate_item_locs):
-    populate_item_locs()
+def test_get_hint_response(hint_times_fh):
+    hint_times = HintTimes(test_guild_id)
+    item_locs = ItemLocations(test_guild_id, item_locs_dict)
 
     # First hint success
-    response = get_hint_response("player1", item_key, 0, test_guild_id)
+    response = get_hint_response("player1", item_key, 0, hint_times, item_locs)
     assert response == player1_locs[0]  # player1 has one location
 
     # Successful hint should trigger creation of hint timestamps file, and result in cooldown response
     hint_times_data = hint_times_fh.load(test_guild_id)
     assert hint_times_data[HintTimes.COOLDOWN_KEY] == DEFAULT_HINT_COOLDOWN_SEC
     assert hint_times_data[HintTimes.ASKERS_KEY].keys() == {"0"}
-    response = get_hint_response("player1", item_key, 0, test_guild_id)
+    response = get_hint_response("player1", item_key, 0, hint_times, item_locs)
     assert response[:-1] == "Please chill for another 0:29:5"
 
     # New author should be successful with the same hint request, once
-    response = get_hint_response("player1", item_key, 1, test_guild_id)
+    response = get_hint_response("player1", item_key, 1, hint_times, item_locs)
     assert response == player1_locs[0]
-    response = get_hint_response("player1", item_key, 1, test_guild_id)
+    response = get_hint_response("player1", item_key, 1, hint_times, item_locs)
     assert response[:-1] == "Please chill for another 0:29:5"
 
     # Test response with item name and alias
-    response = get_hint_response("player1", item_name, 2, test_guild_id)
+    response = get_hint_response("player1", item_name, 2, hint_times, item_locs)
     assert response == player1_locs[0]
-    response = get_hint_response("player1", item_alias, 3, test_guild_id)
+    response = get_hint_response("player1", item_alias, 3, hint_times, item_locs)
     assert response == player1_locs[0]
 
     # Test response with multiple locations
-    response = get_hint_response("player2", item_key, 4, test_guild_id)
+    response = get_hint_response("player2", item_key, 4, hint_times, item_locs)
     assert response == "\n".join(player2_locs)  # player2 has two locations
 
 

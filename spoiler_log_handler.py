@@ -4,7 +4,7 @@ from enum import Enum
 from typing import List
 
 from consts import IGNORED_ITEMS
-from item_location_handler import ItemLocations, set_item_locations
+from item_location_handler import ItemLocations
 from utils import canonicalize
 
 log = logging.getLogger(__name__)
@@ -25,7 +25,9 @@ class SpoilerStep(Enum):
     PROCESS_LOCATIONS = "process locations section"
 
 
-def handle_spoiler_log(spoiler_log_lines: List[str], guild_id):
+def handle_spoiler_log(
+    spoiler_log_lines: List[str], guild_id
+) -> tuple[str, ItemLocations]:
     current_step = SpoilerStep.FIND_PLAYER_COUNT
     player_count = 0
     item_locations = {}
@@ -83,16 +85,22 @@ def handle_spoiler_log(spoiler_log_lines: List[str], guild_id):
                 item_locations = {}
                 break
 
-    set_item_locations(item_locations, guild_id)
-
     if not len(item_locations):
-        # We still replace current locations file even in this case (with empty data)
-        return f"Failed to {current_step.value}. Could not extract data."
+        return (
+            f"Failed to {current_step.value}. Could not extract data.",
+            ItemLocations(guild_id, {}),
+        )
+
+    item_locs = ItemLocations(guild_id, item_locations)
     if len(unparsed_lines):
         # you can't put \ in an f-strings curly brace expr
         unparsed_lines_str = "\n".join(unparsed_lines)
         return (
             "Some lines in the spoiler log were unrecognized, which may result in missing item locations:\n"
-            + f"||{unparsed_lines_str}||"
+            + f"||{unparsed_lines_str}||",
+            item_locs,
         )
-    return "Spoiler log processed successfully!"
+    return (
+        "Spoiler log processed successfully!",
+        item_locs,
+    )

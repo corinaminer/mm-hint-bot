@@ -129,24 +129,3 @@ def generate_aliases(item_locations):
         for alias in generate_item_aliases(item_data["name"]):
             aliases[alias] = item_key
     return aliases
-
-
-# Never contains more than the most-recently-used ItemLocations.
-# Don't want to keep them all around because the bot could be running for a long time.
-cached_item_locations: list[ItemLocations] = []
-
-
-def get_item_locations(guild_id) -> ItemLocations:
-    if not len(cached_item_locations):
-        cached_item_locations.append(ItemLocations(guild_id))
-    elif cached_item_locations[0].guild_id != guild_id:
-        cached_item_locations[0] = ItemLocations(guild_id)
-    return cached_item_locations[0]
-
-
-def set_item_locations(item_locations, guild_id):
-    new_item_locations = ItemLocations(guild_id, item_locations)
-    if len(cached_item_locations):
-        cached_item_locations[0] = new_item_locations
-    else:
-        cached_item_locations.append(new_item_locations)
