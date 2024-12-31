@@ -3,7 +3,7 @@ import re
 import time
 
 from consts import BOT_VERSION, VERSION_KEY
-from item_location_handler import ItemLocations
+from hint_data import HintData
 from utils import FileHandler
 
 log = logging.getLogger(__name__)
@@ -88,7 +88,7 @@ def get_hint_response(
     item: str,
     author_id: int,
     hint_times: HintTimes,
-    item_locations: ItemLocations,
+    hint_data: HintData,
 ) -> str:
     try:
         player_number = get_player_number(player)
@@ -96,7 +96,7 @@ def get_hint_response(
         return f'Unrecognized player {player}. (Did you format without spaces as in "player5"?)'
 
     try:
-        item_name, player_locs_for_item = item_locations.get_locations(
+        item_name, player_locs_for_item = hint_data.get_locations(
             player_number, item
         )
     except FileNotFoundError:
