@@ -94,13 +94,13 @@ def test_get_hint_response(hint_times_fh):
     assert hint_times_data[HintTimes.COOLDOWN_KEY] == DEFAULT_HINT_COOLDOWN_SEC
     assert hint_times_data[HintTimes.ASKERS_KEY].keys() == {"0"}
     response = get_hint_response("player1", item_key, 0, hint_times, item_locs)
-    assert response[:-1] == "Please chill for another 0:29:5"
+    assert response.startswith("Whoa nelly! You can't get another hint until <t:")
 
     # New author should be successful with the same hint request, once
     response = get_hint_response("player1", item_key, 1, hint_times, item_locs)
     assert response == player1_locs[0]
     response = get_hint_response("player1", item_key, 1, hint_times, item_locs)
-    assert response[:-1] == "Please chill for another 0:29:5"
+    assert response.startswith("Whoa nelly! You can't get another hint until <t:")
 
     # Test response with item name and alias
     response = get_hint_response("player1", item_name, 2, hint_times, item_locs)

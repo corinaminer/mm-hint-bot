@@ -57,19 +57,19 @@ class HintTimes:
         }
         HintTimes.fh.store(filedata, self.guild_id)
 
-    def attempt_hint(self, asker_id: str) -> float:
+    def attempt_hint(self, asker_id: str) -> int:
         """
-        Returns seconds remaining before the given member can get another hint, or 0 if member is currently eligible.
+        Returns timestamp in seconds at which the member is allowed another hint, or 0 if member is currently eligible.
         When this function returns 0, it also sets the member's last hint time to the current time.
         """
-        current_time = time.time()
-        last_hint_time = self.askers.get(asker_id, 0)
-        wait_time_sec = max(self.cooldown - (current_time - last_hint_time), 0)
-        if wait_time_sec == 0:
+        next_hint_time = self.askers.get(asker_id, 0) + self.cooldown
+        current_time = int(time.time())
+        if next_hint_time < current_time:
             # Hint is allowed. Record new hint timestamp.
             self.askers[asker_id] = current_time
             self.save()
-        return wait_time_sec
+            return 0
+        return int(next_hint_time)
 
     def set_cooldown(self, cooldown_min):
         self.cooldown = cooldown_min * 60
@@ -111,7 +111,8 @@ def get_hint_response(
     hint_wait_time = hint_times.attempt_hint(str(author_id))
     # TODO Bring back hold your horses plus flavors
     if hint_wait_time:
-        return f"Please chill for another {format_wait_time(int(hint_wait_time))}"
+        log.debug(f"Hint denied due to cooldown until {hint_wait_time}")
+        return f"Whoa nelly! You can't get another hint until <t:{hint_wait_time}:T> -- hold your horses!!"
 
     return "\n".join(player_locs_for_item)
 
