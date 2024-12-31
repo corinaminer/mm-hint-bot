@@ -1,6 +1,6 @@
 import logging
 
-from consts import BOT_VERSION, STANDARD_ALIASES, VERSION_KEY
+from consts import BOT_VERSION, STANDARD_ITEM_ALIASES, VERSION_KEY
 from hint_data import HintData
 from utils import FileHandler, canonicalize
 
@@ -47,7 +47,7 @@ class ItemLocations(HintData):
 
     def generate_aliases(self):
         aliases = {}
-        for alias, item_key in STANDARD_ALIASES.items():
+        for alias, item_key in STANDARD_ITEM_ALIASES.items():
             if item_key in self.items:
                 aliases[alias] = item_key
         for item_key, item_data in self.items.items():

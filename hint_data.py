@@ -1,6 +1,6 @@
 import logging
 
-from consts import BOT_VERSION, STANDARD_ALIASES, VERSION_KEY
+from consts import BOT_VERSION, VERSION_KEY
 from utils import canonicalize
 
 log = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class HintData:
         self.items = items
         self.aliases = self.generate_aliases()
 
-    def find_matching_items(self, query) -> list[str]:
+    def find_matches(self, query) -> list[str]:
         """Returns items matching the given search query. Raises FileNotFoundError if no data is stored."""
         if not len(self.items):
             raise FileNotFoundError

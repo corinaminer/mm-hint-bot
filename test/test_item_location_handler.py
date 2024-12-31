@@ -46,12 +46,12 @@ def fh():
 def test_find_matching_items(fh):
     item_locs = ItemLocations(test_guild_id)
     with pytest.raises(FileNotFoundError):
-        item_locs.find_matching_items("foo")
+        item_locs.find_matches("foo")
 
     item_locs = ItemLocations(test_guild_id, v1_items)
-    assert item_locs.find_matching_items("foo") == []
-    assert item_locs.find_matching_items("kafeis") == ["Kafei's Mask"]
-    assert item_locs.find_matching_items("Kafei's") == ["Kafei's Mask"]
+    assert item_locs.find_matches("foo") == []
+    assert item_locs.find_matches("kafeis") == ["Kafei's Mask"]
+    assert item_locs.find_matches("Kafei's") == ["Kafei's Mask"]
 
 
 def test_update_version_v0(fh):

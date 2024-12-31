@@ -39,7 +39,7 @@ IGNORED_ITEMS = {
     "Owl Statue (Stone Tower)",
 }
 
-STANDARD_ALIASES = {
+STANDARD_ITEM_ALIASES = {
     "bow": "heros bow",
     "cow mask": "romanis mask",
     "magic": "magic upgrade",
@@ -49,4 +49,23 @@ STANDARD_ALIASES = {
     "strength": "progressive strength",
     "sword": "progressive sword",
     "wallet": "progressive wallet",
+}
+
+STANDARD_LOCATION_ALIASES = {
+    "gbt": "temple great bay",
+    "great bay temple": "temple great bay",
+    "istt": "temple stone tower inverted",
+    "inverted stone tower temple": "temple stone tower inverted",
+    "osh": "spider house ocean",
+    "ocean spider house": "spider house ocean",
+    "pf": "pirate fortress",
+    "pirates fortress": "pirate fortress",
+    "sht": "temple snowhead",
+    "snowhead temple": "temple snowhead",
+    "ssh": "spider house swamp",
+    "swamp spider house": "spider house swamp",
+    "stt": "temple stone tower",
+    "stone tower temple": "temple stone tower",
+    "wft": "temple woodfall",
+    "woodfall temple": "temple woodfall",
 }
