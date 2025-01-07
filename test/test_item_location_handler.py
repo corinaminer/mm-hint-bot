@@ -54,15 +54,6 @@ def test_find_matching_items(fh):
     assert item_locs.find_matches("Kafei's") == ["Kafei's Mask"]
 
 
-def test_update_version_v0(fh):
-    # Initiating ItemLocations should gracefully update old data formats to the current version format
-    fh.store(v0_item_location_data, test_guild_id)
-    item_locations = ItemLocations(test_guild_id)
-    assert item_locations.items == v1_items
-    assert item_locations.aliases == v1_aliases
-    assert fh.load(test_guild_id) == v1_item_location_data
-
-
 def test_unknown_version(fh):
     # If version is unknown, ItemLocations should act like no file exists
     invalid_version_data = {

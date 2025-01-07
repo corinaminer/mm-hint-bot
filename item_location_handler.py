@@ -2,13 +2,13 @@ import logging
 
 from consts import BOT_VERSION, STANDARD_ITEM_ALIASES, VERSION_KEY
 from hint_data import HintData
-from utils import FileHandler, canonicalize
+from utils import FileHandler, HintType, canonicalize
 
 log = logging.getLogger(__name__)
 
 
 class ItemLocations(HintData):
-    fh = FileHandler("locations")
+    fh = FileHandler("items")
 
     def __init__(self, guild_id, items=None):
         self.guild_id = guild_id
@@ -17,7 +17,7 @@ class ItemLocations(HintData):
                 items = self._get_items_from_file()
             except FileNotFoundError:
                 items = {}
-        super().__init__(items)
+        super().__init__(items, guild_id, HintType.ITEM)
         self.save()
 
     def _get_items_from_file(self) -> dict[str, dict]:
@@ -26,20 +26,7 @@ class ItemLocations(HintData):
         if data_version == BOT_VERSION:
             return data[ItemLocations.DATA_KEY]
 
-        # Data in file is outdated or corrupt. If it's a known old version, use it; otherwise ignore it.
-        if data_version is None:
-            # v0 did not contain a version number, and RESUlTS_KEY was "locations" instead of "results"
-            log.info("Updating locations file from v0")
-            items = {}
-            for item_key, item_data in data.items():
-                new_item_key = canonicalize(item_data["name"])
-                items[new_item_key] = {
-                    ItemLocations.NAME_KEY: item_data["name"],
-                    ItemLocations.RESULTS_KEY: item_data["locations"],
-                }
-            return items
-
-        log.info(f"No protocol for updating filedata with version {data_version}")
+        log.info(f"No protocol for updating item data with version {data_version}")
         raise FileNotFoundError  # will result in default cooldown and no saved askers
 
     def save(self):

@@ -2,7 +2,7 @@ import logging
 
 from consts import BOT_VERSION, STANDARD_LOCATION_ALIASES, VERSION_KEY
 from hint_data import HintData
-from utils import FileHandler
+from utils import FileHandler, HintType
 
 log = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ class Entrances(HintData):
                 items = self._get_items_from_file()
             except FileNotFoundError:
                 items = {}
-        super().__init__(items)
+        super().__init__(items, guild_id, HintType.ENTRANCE)
         self.save()
 
     def _get_items_from_file(self) -> dict[str, dict]:
@@ -27,7 +27,7 @@ class Entrances(HintData):
             return data[Entrances.DATA_KEY]
 
         # Data in file is outdated or corrupt. If it's a known old version, use it; otherwise ignore it.
-        log.info(f"No protocol for updating entrances data with version {data_version}")
+        log.info(f"No protocol for updating entrance data with version {data_version}")
         raise FileNotFoundError  # will result in default cooldown and no saved askers
 
     def save(self):

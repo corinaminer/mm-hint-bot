@@ -1,4 +1,22 @@
 import json
+from enum import Enum
+
+
+class HintType(Enum):
+    ITEM = "item"
+    ENTRANCE = "entrance"
+
+    def __str__(self):
+        return self.value
+
+
+def get_hint_types(query) -> list[HintType]:
+    if query == "all":
+        return [h for h in HintType]
+    try:
+        return [HintType(query)]
+    except ValueError:
+        return []
 
 
 def canonicalize(s: str) -> str:
