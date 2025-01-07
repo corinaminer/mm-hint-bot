@@ -54,7 +54,7 @@ def get_entrances(guild_id) -> Entrances:
 @commands.has_role(ADMIN_ROLE_NAME)
 async def set_spoiler_log(ctx):
     """
-    Updates the spoiler log from the text file attached to the "!set-log" message. Admin-only.
+    Updates spoiler log from the attached text file. Admin-only.
     """
     if len(ctx.message.attachments) == 0:
         await ctx.send(
@@ -115,7 +115,7 @@ async def hint_entrance(
 
 @bot.command(name="search")
 async def search(
-    ctx, *, query=commands.parameter(description="Search query for items")
+    ctx, *, query=commands.parameter(description="Search query")
 ):
     """
     Lists items and entrances matching search query. Only returns matches that have the query as an exact substring (case-insensitive).
@@ -134,7 +134,7 @@ async def set_hint_cooldown(
     ctx,
     cooldown: int = commands.parameter(description="Cooldown time in minutes"),
     hint_type: Optional[str] = commands.parameter(
-        description="Optional hint type for which to change cooldown: item | entrance | all (default all)"
+        description="Optional hint type: item | entrance | all (default all)"
     ),
 ):
     """
@@ -158,6 +158,34 @@ async def set_hint_cooldown(
         await ctx.send(
             f"Set {changed} cooldown{cooldown_plur} to {cooldown} minute{minute_plur}."
         )
+
+
+@bot.command(name="cooldown")
+async def show_cooldown(
+    ctx,
+    hint_type: Optional[str] = commands.parameter(
+        description="Optional hint type: item | entrance | all (default all)"
+    ),
+):
+    """
+    Shows hint cooldown time for the given hint type, or all by default.
+    """
+    guild_id = ctx.guild.id
+    hint_types_to_show = get_hint_types(hint_type or "all")
+    if not len(hint_types_to_show):
+        await ctx.send(f"Unrecognized hint type '{hint_type}'.")
+    else:
+        response_lines = []
+        if HintType.ITEM in hint_types_to_show:
+            hint_times = get_item_locations(guild_id).hint_times
+            response_lines.append(
+                f"Item hint cooldown: {hint_times.cooldown // 60} minutes"
+            )
+        if HintType.ENTRANCE in hint_types_to_show:
+            # TODO Avoid showing entrance cooldown for hint_type "all" if entrance rando is off?
+            hint_times = get_entrances(guild_id).hint_times
+            response_lines.append(f"Entrance hint cooldown: {hint_times.cooldown // 60} minutes")
+        await ctx.send("\n".join(response_lines))
 
 
 @bot.event
