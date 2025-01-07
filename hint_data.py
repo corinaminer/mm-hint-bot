@@ -41,16 +41,16 @@ class HintData:
     """
 
     def __init__(self, guild_id, hint_type: HintType, items: dict[str, dict] = None):
-        self.hint_type = hint_type
-        self.filename = hint_data_filename(guild_id, hint_type)
+        self.hint_type: HintType = hint_type
+        self.filename: str = hint_data_filename(guild_id, hint_type)
         if items is None:
             try:
                 items = self._get_items_from_file()
             except FileNotFoundError:
                 items = {}
-        self.items = items
-        self.aliases = self.generate_aliases()
-        self.hint_times = HintTimes(guild_id, hint_type)
+        self.items: dict[str, dict] = items
+        self.aliases: dict[str, str] = self.generate_aliases()
+        self.hint_times: HintTimes = HintTimes(guild_id, hint_type)
         self.save()
 
     def _get_items_from_file(self) -> dict[str, dict]:
@@ -76,9 +76,9 @@ class HintData:
             if query in item_key
         ]
 
-    def get_locations(self, player_num: int, item_query: str) -> tuple[str, list[str]]:
+    def get_results(self, player_num: int, item_query: str) -> tuple[str, list[str]]:
         """
-        Returns a tuple of the item name and list of locations where it can be found for the given player.
+        Returns a tuple of the item name and list of results for the given player.
         Raises FileNotFoundError if no item data is stored, and ValueError for unrecognized player num or item query.
         """
         if not len(self.items):

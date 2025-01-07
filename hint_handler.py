@@ -27,7 +27,7 @@ def get_hint_response(
         return f'Unrecognized player {player}. (Did you format without spaces as in "player5"?)'
 
     try:
-        item_name, player_locs_for_item = hint_data.get_locations(player_number, item)
+        item_name, player_locs_for_item = hint_data.get_results(player_number, item)
     except FileNotFoundError:
         return "No data is currently stored. (Use !set-log to upload a spoiler log.)"
     except ValueError as e:
