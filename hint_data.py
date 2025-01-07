@@ -2,11 +2,19 @@ import logging
 import time
 
 from consts import BOT_VERSION, VERSION_KEY
-from utils import FileHandler, HintType, canonicalize
+from utils import HintType, canonicalize, load, store
 
 log = logging.getLogger(__name__)
 
 DEFAULT_HINT_COOLDOWN_SEC = 30 * 60
+
+
+def hint_data_filename(guild_id, hint_type: HintType) -> str:
+    return f"{guild_id}-{hint_type}.json"
+
+
+def hint_times_filename(guild_id, hint_type: HintType) -> str:
+    return f"{guild_id}-{hint_type}-hint_times.json"
 
 
 class HintData:
@@ -32,11 +40,30 @@ class HintData:
     }
     """
 
-    def __init__(self, items: dict[str, dict], guild_id, hint_type: HintType):
+    def __init__(self, guild_id, hint_type: HintType, items: dict[str, dict] = None):
+        self.hint_type = hint_type
+        self.filename = hint_data_filename(guild_id, hint_type)
+        if items is None:
+            try:
+                items = self._get_items_from_file()
+            except FileNotFoundError:
+                items = {}
         self.items = items
         self.aliases = self.generate_aliases()
         self.hint_times = HintTimes(guild_id, hint_type)
-        self.hint_type = hint_type
+        self.save()
+
+    def _get_items_from_file(self) -> dict[str, dict]:
+        data = load(self.filename)
+        data_version = data.get(VERSION_KEY)
+        if data_version == BOT_VERSION:
+            return data[HintData.DATA_KEY]
+
+        # Data in file is outdated or corrupt. If it's a known old version, use it; otherwise ignore it.
+        log.info(
+            f"No protocol for updating {self.hint_type} data with version {data_version}"
+        )
+        raise FileNotFoundError
 
     def find_matches(self, query) -> list[str]:
         """Returns items matching the given search query. Raises FileNotFoundError if no data is stored."""
@@ -81,8 +108,7 @@ class HintData:
         }
 
     def save(self):
-        # Should be implemented by child classes, which have an associated filename
-        raise NotImplementedError
+        store(self._get_filedata(), self.filename)
 
     def generate_aliases(self):
         # Should be implemented by child classes
@@ -94,8 +120,7 @@ class HintTimes:
     ASKERS_KEY = "askers"
 
     def __init__(self, guild_id, hint_type: HintType):
-        self.fh = FileHandler(f"{hint_type}_hint_times")
-        self.guild_id = guild_id
+        self.filename = hint_times_filename(guild_id, hint_type)
         try:
             self._init_from_file()
         except FileNotFoundError:
@@ -103,7 +128,7 @@ class HintTimes:
             self.askers = {}
 
     def _init_from_file(self):
-        data = self.fh.load(self.guild_id)
+        data = load(self.filename)
         data_version = data.get(VERSION_KEY)
         if data_version == BOT_VERSION:
             self.cooldown = data[HintTimes.COOLDOWN_KEY]
@@ -121,7 +146,7 @@ class HintTimes:
             HintTimes.COOLDOWN_KEY: self.cooldown,
             HintTimes.ASKERS_KEY: self.askers,
         }
-        self.fh.store(filedata, self.guild_id)
+        store(filedata, self.filename)
 
     def attempt_hint(self, asker_id: str) -> int:
         """

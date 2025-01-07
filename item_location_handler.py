@@ -1,36 +1,15 @@
 import logging
 
-from consts import BOT_VERSION, STANDARD_ITEM_ALIASES, VERSION_KEY
+from consts import STANDARD_ITEM_ALIASES
 from hint_data import HintData
-from utils import FileHandler, HintType, canonicalize
+from utils import HintType, canonicalize
 
 log = logging.getLogger(__name__)
 
 
 class ItemLocations(HintData):
-    fh = FileHandler("items")
-
     def __init__(self, guild_id, items=None):
-        self.guild_id = guild_id
-        if items is None:
-            try:
-                items = self._get_items_from_file()
-            except FileNotFoundError:
-                items = {}
-        super().__init__(items, guild_id, HintType.ITEM)
-        self.save()
-
-    def _get_items_from_file(self) -> dict[str, dict]:
-        data = ItemLocations.fh.load(self.guild_id)
-        data_version = data.get(VERSION_KEY)
-        if data_version == BOT_VERSION:
-            return data[ItemLocations.DATA_KEY]
-
-        log.info(f"No protocol for updating item data with version {data_version}")
-        raise FileNotFoundError  # will result in default cooldown and no saved askers
-
-    def save(self):
-        ItemLocations.fh.store(self._get_filedata(), self.guild_id)
+        super().__init__(guild_id, HintType.ITEM, items)
 
     def generate_aliases(self):
         aliases = {}

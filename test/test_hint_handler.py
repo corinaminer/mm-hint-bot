@@ -4,19 +4,13 @@ import time
 import pytest
 
 from consts import BOT_VERSION, VERSION_KEY
-from hint_data import DEFAULT_HINT_COOLDOWN_SEC, HintTimes
+from hint_data import DEFAULT_HINT_COOLDOWN_SEC, HintTimes, hint_times_filename
 from hint_handler import get_hint_response
 from item_location_handler import ItemLocations
-from utils import HintType
+from utils import HintType, load, store
 
 test_guild_id = "test-guild-id"
-test_hint_times = HintTimes(test_guild_id, HintType.ITEM)
-
-
-@pytest.fixture
-def hint_times_fh():
-    yield test_hint_times.fh
-
+hint_times_file = hint_times_filename(test_guild_id, HintType.ITEM)
 
 item_key = "kafeis mask"
 item_name = "Kafei's Mask"
@@ -40,15 +34,12 @@ item_locs_dict = {
 def cleanup():
     yield
 
-    item_locs_filename = ItemLocations.fh._get_filename(test_guild_id)
-    hint_times_filename = test_hint_times.fh._get_filename(test_guild_id)
-    if os.path.exists(item_locs_filename):
-        os.remove(item_locs_filename)
-    if os.path.exists(hint_times_filename):
-        os.remove(hint_times_filename)
+    for file in os.listdir():
+        if file.startswith(test_guild_id) and file.endswith(".json"):
+            os.remove(file)
 
 
-def test_get_hint_failures(hint_times_fh):
+def test_get_hint_failures():
     item_locs = ItemLocations(test_guild_id, {})
     response = get_hint_response("playerx", "foo", 0, item_locs)
     assert (
@@ -80,10 +71,10 @@ def test_get_hint_failures(hint_times_fh):
 
     # None of these should have triggered a hint timestamp to be recorded
     with pytest.raises(FileNotFoundError):
-        hint_times_fh.load(test_guild_id)
+        load(hint_times_file)
 
 
-def test_get_hint_response(hint_times_fh):
+def test_get_hint_response():
     item_locs = ItemLocations(test_guild_id, item_locs_dict)
 
     # First hint success
@@ -91,7 +82,7 @@ def test_get_hint_response(hint_times_fh):
     assert response == player1_locs[0]  # player1 has one location
 
     # Successful hint should trigger creation of hint timestamps file, and result in cooldown response
-    hint_times_data = hint_times_fh.load(test_guild_id)
+    hint_times_data = load(hint_times_file)
     assert hint_times_data[HintTimes.COOLDOWN_KEY] == DEFAULT_HINT_COOLDOWN_SEC
     assert hint_times_data[HintTimes.ASKERS_KEY].keys() == {"0"}
     response = get_hint_response("player1", item_key, 0, item_locs)
@@ -114,7 +105,7 @@ def test_get_hint_response(hint_times_fh):
     assert response == "\n".join(player2_locs)  # player2 has two locations
 
 
-def test_unknown_version(hint_times_fh):
+def test_unknown_version():
     # If version is unknown, HintTimes should fall back on default values
     hint_times = {
         VERSION_KEY: "foo",
@@ -123,7 +114,7 @@ def test_unknown_version(hint_times_fh):
             "0": time.time(),
         },
     }
-    hint_times_fh.store(hint_times, test_guild_id)
+    store(hint_times, hint_times_file)
 
     expected_updated_data = {
         VERSION_KEY: BOT_VERSION,
@@ -133,4 +124,4 @@ def test_unknown_version(hint_times_fh):
     hint_times = HintTimes(test_guild_id, HintType.ITEM)
     assert hint_times.cooldown == DEFAULT_HINT_COOLDOWN_SEC and hint_times.askers == {}
     hint_times.save()
-    assert hint_times_fh.load(test_guild_id) == expected_updated_data
+    assert load(hint_times_file) == expected_updated_data

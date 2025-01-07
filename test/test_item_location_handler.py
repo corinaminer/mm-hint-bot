@@ -1,9 +1,14 @@
+import os
+
 import pytest
 
 from consts import BOT_VERSION, VERSION_KEY
+from hint_data import hint_data_filename
 from item_location_handler import ItemLocations
+from utils import HintType, load, store
 
 test_guild_id = "test-guild-id"
+item_locs_file = hint_data_filename(test_guild_id, HintType.ITEM)
 
 v0_item_location_data = {
     "item1": {"name": "Kafei's Mask", "locations": [["location1"], ["location2"]]},
@@ -33,17 +38,16 @@ v1_item_location_data = {
 }
 
 
-@pytest.fixture
-def fh():
-    yield ItemLocations.fh
-    import os
+@pytest.fixture(autouse=True)
+def cleanup():
+    yield
 
-    filename = ItemLocations.fh._get_filename(test_guild_id)
-    if os.path.exists(filename):
-        os.remove(filename)
+    for file in os.listdir():
+        if file.startswith(test_guild_id) and file.endswith(".json"):
+            os.remove(file)
 
 
-def test_find_matching_items(fh):
+def test_find_matching_items():
     item_locs = ItemLocations(test_guild_id)
     with pytest.raises(FileNotFoundError):
         item_locs.find_matches("foo")
@@ -54,18 +58,18 @@ def test_find_matching_items(fh):
     assert item_locs.find_matches("Kafei's") == ["Kafei's Mask"]
 
 
-def test_unknown_version(fh):
+def test_unknown_version():
     # If version is unknown, ItemLocations should act like no file exists
     invalid_version_data = {
         VERSION_KEY: "foo",
         ItemLocations.DATA_KEY: v1_items,
     }
-    fh.store(invalid_version_data, test_guild_id)
+    store(invalid_version_data, item_locs_file)
 
     item_locations = ItemLocations(test_guild_id)
     assert item_locations.items == {} and item_locations.aliases == {}
     item_locations.save()
-    assert fh.load(test_guild_id) == {
+    assert load(item_locs_file) == {
         VERSION_KEY: BOT_VERSION,
         ItemLocations.DATA_KEY: {},
     }
