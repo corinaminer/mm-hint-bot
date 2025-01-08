@@ -72,6 +72,25 @@ STANDARD_ITEM_ALIASES = {
     "wallet": "progressive wallet",
 }
 
+STANDARD_CHECK_ALIASES = {
+    "anju and kafei": "stock pot inn couples mask",
+    "gossips": "termina field gossip stones hp",
+    "boat archery": "tourist information boat archery",
+    "butler": "deku shrine mask of scents",
+    "hungry goron": "mountain village don gero mask",
+    "hugo": "mountain village don gero mask",
+    "smithy 1": "blacksmith razor blade",
+    "smithy 2": "blacksmith gilded sword",
+    "darmani": "goron graveyard mask",
+    "goron race": "goron race reward",
+    "mikau": "great bay coast zora mask",
+    "seahorses": "pinnacle rock hp",
+    "beavers": "waterfall rapids beaver race 1",
+    "fisherman": "great bay coast fisherman hp",
+    "dampe": "beneath the graveyard dampe chest",
+    "pamela": "music box house gibdo mask",
+}
+
 STANDARD_LOCATION_ALIASES = {
     "gbt": "temple great bay",
     "great bay temple": "temple great bay",

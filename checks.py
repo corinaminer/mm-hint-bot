@@ -1,5 +1,6 @@
 import logging
 
+from consts import STANDARD_CHECK_ALIASES
 from hint_data import HintData
 from utils import HintType
 
@@ -11,5 +12,8 @@ class Checks(HintData):
         super().__init__(guild_id, HintType.CHECK, items)
 
     def generate_aliases(self):
-        # TODO
-        return {}
+        aliases = {}
+        for alias, item_key in STANDARD_CHECK_ALIASES.items():
+            if item_key in self.items:
+                aliases[alias] = item_key
+        return aliases
