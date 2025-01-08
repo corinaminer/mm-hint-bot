@@ -1,5 +1,6 @@
 import logging
 import re
+from typing import Optional
 
 from hint_data import HintData, HintTimes
 
@@ -8,24 +9,19 @@ log = logging.getLogger(__name__)
 player_re = re.compile(r"^@?player(\d+)$")  # player14, @Player14
 
 
-def get_player_number(player: str) -> int:
+def get_player_number(player: str) -> Optional[int]:
     match = player_re.search(player.lower())
     if match:
         return int(match.group(1))
-    raise ValueError()
+    return None
 
 
 def get_hint_response(
-    player: str,
+    player_number: int,
     item: str,
     author_id: int,
     hint_data: HintData,
 ) -> str:
-    try:
-        player_number = get_player_number(player)
-    except ValueError:
-        return f'Unrecognized player {player}. (Did you format without spaces as in "player5"?)'
-
     try:
         item_name, player_locs_for_item = hint_data.get_results(player_number, item)
     except FileNotFoundError:
@@ -34,7 +30,7 @@ def get_hint_response(
         return e.args[0]  # message
 
     if not len(player_locs_for_item):
-        return f"For some reason there is no data for {player}'s {item_name}........ sorry!!! There must be something wrong with me :( Please report."
+        return f"For some reason there is no data for player {player_number}'s {item_name}........ sorry!!! There must be something wrong with me :( Please report."
 
     # Convert author ID for serialization; JSON keys must be strings
     hint_wait_time = hint_data.hint_times.attempt_hint(str(author_id))

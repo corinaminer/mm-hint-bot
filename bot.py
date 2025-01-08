@@ -1,5 +1,6 @@
 import logging
 import os
+from typing import Optional
 
 import discord
 from discord.ext import commands
@@ -7,7 +8,7 @@ from dotenv import load_dotenv
 
 from checks import Checks
 from entrances import Entrances
-from hint_handler import get_hint_response, set_cooldown
+from hint_handler import get_hint_response, get_player_number, set_cooldown
 from item_locations import ItemLocations
 from search_handler import get_search_response
 from spoiler_log_handler import handle_spoiler_log
@@ -26,7 +27,8 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 player_param = commands.parameter(
-    description="Player formatted without spaces, e.g. player5"
+    description="Optional player number, e.g. 5. Defaults to author's @playerN role.",
+    default=None,
 )
 hint_type_param = commands.parameter(
     description="Optional hint type: item | check | entrance | all",
@@ -97,43 +99,52 @@ async def set_spoiler_log(ctx):
         await ctx.send(result_msg)
 
 
-def get_hint(guild_id, author_id, hint_type: HintType, player, query):
+def get_hint(guild_id, author, hint_type: HintType, player_num, query):
+    if player_num is None:
+        # Check for player num in author's roles
+        for role in author.roles:
+            player_num = get_player_number(role.name.lower())
+            if player_num is not None:
+                break
+    if player_num is None:
+        return f'Unable to detect a player ID in your roles. Please specify your player number, e.g. "!hint 3 sword".'
+
     hint_data = get_hint_data(hint_type, guild_id)
-    return get_hint_response(player, query, author_id, hint_data)
+    return get_hint_response(player_num, query, author.id, hint_data)
 
 
 @bot.command(name="hint")
 async def hint(
     ctx,
-    player=player_param,
+    player: Optional[int] = player_param,
     *,
-    item=commands.parameter(description="Item to look up"),
+    item: str = commands.parameter(description="Item to look up"),
 ):
     """Reveals location(s) of the given item for the given player."""
-    await ctx.send(get_hint(ctx.guild.id, ctx.author.id, HintType.ITEM, player, item))
+    await ctx.send(get_hint(ctx.guild.id, ctx.author, HintType.ITEM, player, item))
 
 
 @bot.command(name="hint-check")
 async def hint_check(
     ctx,
-    player=player_param,
+    player: Optional[int] = player_param,
     *,
-    check=commands.parameter(description="Check to look up"),
+    check: str = commands.parameter(description="Check to look up"),
 ):
     """Reveals item at the given check for the given player."""
-    await ctx.send(get_hint(ctx.guild.id, ctx.author.id, HintType.CHECK, player, check))
+    await ctx.send(get_hint(ctx.guild.id, ctx.author, HintType.CHECK, player, check))
 
 
 @bot.command(name="hint-entrance")
 async def hint_entrance(
     ctx,
-    player=player_param,
+    player: Optional[int] = player_param,
     *,
-    location=commands.parameter(description="Location to look up"),
+    location: str = commands.parameter(description="Location to look up"),
 ):
     """Reveals entrance to the given location for the given player."""
     await ctx.send(
-        get_hint(ctx.guild.id, ctx.author.id, HintType.ENTRANCE, player, location)
+        get_hint(ctx.guild.id, ctx.author, HintType.ENTRANCE, player, location)
     )
 
 
@@ -160,7 +171,7 @@ async def search(ctx, *, query=commands.parameter(description="Search query")):
 
 @bot.command(name="set-cooldown")
 @commands.has_role(ADMIN_ROLE_NAME)
-async def set_cooldown(
+async def set_hint_cooldown(
     ctx,
     cooldown: int = commands.parameter(description="Cooldown time in minutes"),
     hint_type: str = hint_type_param,

@@ -41,13 +41,7 @@ def cleanup():
 
 def test_get_hint_failures():
     item_locs = ItemLocations(test_guild_id, {})
-    response = get_hint_response("playerx", "foo", 0, item_locs)
-    assert (
-        response
-        == f'Unrecognized player playerx. (Did you format without spaces as in "player5"?)'
-    )
-
-    response = get_hint_response("player1", "foo", 0, item_locs)
+    response = get_hint_response(1, "foo", 0, item_locs)
     assert (
         response
         == "No data is currently stored. (Use !set-log to upload a spoiler log.)"
@@ -55,18 +49,18 @@ def test_get_hint_failures():
 
     item_locs = ItemLocations(test_guild_id, item_locs_dict)
 
-    response = get_hint_response("player1", "foo", 0, item_locs)
+    response = get_hint_response(1, "foo", 0, item_locs)
     assert response == "Item foo not recognized. Try !search <keyword> to find it!"
 
-    response = get_hint_response("player0", item_key, 0, item_locs)
+    response = get_hint_response(0, item_key, 0, item_locs)
     assert response == "Invalid player number 0."
-    response = get_hint_response("player4", item_key, 0, item_locs)
+    response = get_hint_response(4, item_key, 0, item_locs)
     assert response == "Invalid player number 4."
 
-    response = get_hint_response("player3", item_key, 0, item_locs)
+    response = get_hint_response(3, item_key, 0, item_locs)
     assert (
         response
-        == f"For some reason there is no data for player3's {item_name}........ sorry!!! There must be something wrong with me :( Please report."
+        == f"For some reason there is no data for player 3's {item_name}........ sorry!!! There must be something wrong with me :( Please report."
     )
 
     # None of these should have triggered a hint timestamp to be recorded
@@ -78,30 +72,30 @@ def test_get_hint_response():
     item_locs = ItemLocations(test_guild_id, item_locs_dict)
 
     # First hint success
-    response = get_hint_response("player1", item_key, 0, item_locs)
+    response = get_hint_response(1, item_key, 0, item_locs)
     assert response == player1_locs[0]  # player1 has one location
 
     # Successful hint should trigger creation of hint timestamps file, and result in cooldown response
     hint_times_data = load(hint_times_file)
     assert hint_times_data[HintTimes.COOLDOWN_KEY] == DEFAULT_HINT_COOLDOWN_SEC
     assert hint_times_data[HintTimes.ASKERS_KEY].keys() == {"0"}
-    response = get_hint_response("player1", item_key, 0, item_locs)
+    response = get_hint_response(1, item_key, 0, item_locs)
     assert response.startswith("Whoa nelly! You can't get another item hint until <t:")
 
     # New author should be successful with the same hint request, once
-    response = get_hint_response("player1", item_key, 1, item_locs)
+    response = get_hint_response(1, item_key, 1, item_locs)
     assert response == player1_locs[0]
-    response = get_hint_response("player1", item_key, 1, item_locs)
+    response = get_hint_response(1, item_key, 1, item_locs)
     assert response.startswith("Whoa nelly! You can't get another item hint until <t:")
 
     # Test response with item name and alias
-    response = get_hint_response("player1", item_name, 2, item_locs)
+    response = get_hint_response(1, item_name, 2, item_locs)
     assert response == player1_locs[0]
-    response = get_hint_response("player1", item_alias, 3, item_locs)
+    response = get_hint_response(1, item_alias, 3, item_locs)
     assert response == player1_locs[0]
 
     # Test response with multiple locations
-    response = get_hint_response("player2", item_key, 4, item_locs)
+    response = get_hint_response(2, item_key, 4, item_locs)
     assert response == "\n".join(player2_locs)  # player2 has two locations
 
 
