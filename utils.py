@@ -5,6 +5,7 @@ from enum import Enum
 class HintType(Enum):
     ITEM = "item"
     ENTRANCE = "entrance"
+    CHECK = "check"
 
     def __str__(self):
         return self.value
@@ -23,7 +24,7 @@ def canonicalize(s: str) -> str:
     """Lowercases & removes punctuation"""
     new_s = ""
     for c in s.lower():
-        if c.isalpha() or c == " ":
+        if c.isalnum() or c == " ":
             new_s += c
     return new_s
 

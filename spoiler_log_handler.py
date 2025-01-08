@@ -3,8 +3,10 @@ import re
 from enum import Enum
 from typing import List
 
+from checks import Checks
 from consts import IGNORED_ITEMS
 from entrances import Entrances
+from hint_data import HintData
 from item_locations import ItemLocations
 from utils import canonicalize
 
@@ -32,16 +34,18 @@ class SpoilerStep(Enum):
     FIND_LOCATIONS = "find locations section"
     PROCESS_LOCATIONS = "process locations section"
 
+    def __str__(self):
+        return self.value
+
 
 def handle_spoiler_log(
     spoiler_log_lines: List[str], guild_id
-) -> tuple[str, ItemLocations, Entrances]:
+) -> tuple[str, ItemLocations, Checks, Entrances]:
     current_step = SpoilerStep.FIND_PLAYER_COUNT
     player_count = 0
-    entrance_data = {}
-    item_locations = {}
+    item_locations, check_data, entrance_data = {}, {}, {}
 
-    current_world = None
+    current_world, current_world_player = None, None
     unparsed_lines = []
 
     for line in spoiler_log_lines:
@@ -76,11 +80,11 @@ def handle_spoiler_log(
                     # Locations are 1:1 with entrances, but put each entrance in a list to conform with HintData format
                     if loc_key not in entrance_data:
                         entrance_data[loc_key] = {
-                            Entrances.NAME_KEY: loc_name,
-                            Entrances.RESULTS_KEY: [[] for _ in range(player_count)],
+                            HintData.NAME_KEY: loc_name,
+                            HintData.RESULTS_KEY: [[] for _ in range(player_count)],
                         }
                     entrance_name = entrance_match.group(2).replace("MM ", "")
-                    entrance_data[loc_key][Entrances.RESULTS_KEY][current_world].append(
+                    entrance_data[loc_key][HintData.RESULTS_KEY][current_world].append(
                         entrance_name
                     )
                     continue
@@ -105,28 +109,43 @@ def handle_spoiler_log(
                 world_match = loc_world_re.search(line)
                 if world_match:
                     current_world = world_match.group(1)
+                    current_world_player = int(current_world) - 1
                     log.debug(f"Parsing world {current_world} locations")
                     continue
 
                 loc_match = loc_re.search(line)
                 if loc_match:
+                    check_name = loc_match.group(1)
+                    player = loc_match.group(2)  # player who will receive the item
                     item_name = loc_match.group(3)
                     if item_name.endswith(" (MM)"):
                         item_name = item_name[:-5]
+
+                    # Add check to { check -> item } mapping
+                    # Checks are 1:1 with items, but put each item in a list to conform with HintData format
+                    check_key = canonicalize(check_name)
+                    if check_key not in check_data:
+                        check_data[check_key] = {
+                            HintData.NAME_KEY: check_name,
+                            HintData.RESULTS_KEY: [[] for _ in range(player_count)],
+                        }
+                    check_data[check_key][HintData.RESULTS_KEY][
+                        current_world_player
+                    ].append(f"Player {player} {item_name}")
+
                     if item_name not in IGNORED_ITEMS:
-                        player = int(loc_match.group(2)) - 1
-                        loc = f"World {current_world} {loc_match.group(1)}"
+                        # Add item to { item -> locations } mapping
+                        player = int(player) - 1
+                        loc = f"World {current_world} {check_name}"
                         item_key = canonicalize(item_name)
                         if item_key not in item_locations:
                             item_locations[item_key] = {
-                                ItemLocations.NAME_KEY: item_name,
-                                ItemLocations.RESULTS_KEY: [
-                                    [] for _ in range(player_count)
-                                ],
+                                HintData.NAME_KEY: item_name,
+                                HintData.RESULTS_KEY: [[] for _ in range(player_count)],
                             }
-                        item_locations[item_key][ItemLocations.RESULTS_KEY][
-                            player
-                        ].append(loc)
+                        item_locations[item_key][HintData.RESULTS_KEY][player].append(
+                            loc
+                        )
                     continue
 
                 if not area_re.search(line):
@@ -139,12 +158,14 @@ def handle_spoiler_log(
                 entrance_data = {}
                 break
 
+    checks = Checks(guild_id, check_data)
     entrances = Entrances(guild_id, entrance_data)
 
     if not len(item_locations):
         return (
             f"Failed to {current_step.value}. Could not extract data.",
             ItemLocations(guild_id, {}),
+            checks,
             entrances,
         )
 
@@ -156,6 +177,7 @@ def handle_spoiler_log(
             "Some lines in the spoiler log were unrecognized, which may result in missing item locations:\n"
             + f"||{unparsed_lines_str}||",
             item_locs,
+            checks,
             entrances,
         )
-    return ("Spoiler log processed successfully!", item_locs, entrances)
+    return "Spoiler log processed successfully!", item_locs, checks, entrances
