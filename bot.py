@@ -118,6 +118,33 @@ async def hint(
     ctx,
     player: Optional[int] = player_param,
     *,
+    query: str = commands.parameter(description="Item, check, or location to look up"),
+):
+    """Reveals location(s) of a given item, result of a given check, or entrance to a given location."""
+    item_key, hint_type, error = None, None, None
+    for ht in get_hint_types("all"):
+        item_key_for_type = get_hint_data(ht, ctx.guild.id).get_item_key(query)
+        if item_key_for_type is not None:
+            if item_key is not None:
+                error = f"Both {hint_type} and {ht} hints can match {query}. Please use !hint-{hint_type} or !hint-{ht}."
+                break
+            item_key, hint_type = item_key_for_type, ht
+
+    if error:
+        await ctx.send(error)
+    elif item_key is None:
+        await ctx.send(
+            f"Query {query} not recognized as an item, check, or location. Try !search <keyword> to find it!"
+        )
+    else:
+        await ctx.send(get_hint(ctx.guild.id, ctx.author, hint_type, player, item_key))
+
+
+@bot.command(name="hint-item")
+async def hint_item(
+    ctx,
+    player: Optional[int] = player_param,
+    *,
     item: str = commands.parameter(description="Item to look up"),
 ):
     """Reveals location(s) of the given item for the given player."""

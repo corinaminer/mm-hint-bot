@@ -1,5 +1,6 @@
 import logging
 import time
+from typing import Optional
 
 from consts import BOT_VERSION, VERSION_KEY
 from utils import HintType, canonicalize, load, store
@@ -75,6 +76,12 @@ class HintData:
             for item_key, hint_result in self.items.items()
             if query in item_key
         ]
+
+    def get_item_key(self, query) -> Optional[str]:
+        query = canonicalize(query)
+        if query in self.items:
+            return query
+        return self.aliases.get(query)
 
     def get_results(self, player_num: int, item_query: str) -> tuple[str, list[str]]:
         """
