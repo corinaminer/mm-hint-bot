@@ -34,7 +34,7 @@ def get_hint_response(
         return e.args[0]  # message
 
     if not len(player_locs_for_item):
-        return f"For some reason there are no locations listed for {player}'s {item_name}........ sorry!!! There must be something wrong with me :( Please report."
+        return f"For some reason there is no data for {player}'s {item_name}........ sorry!!! There must be something wrong with me :( Please report."
 
     # Convert author ID for serialization; JSON keys must be strings
     hint_wait_time = hint_data.hint_times.attempt_hint(str(author_id))

@@ -66,7 +66,7 @@ def test_get_hint_failures():
     response = get_hint_response("player3", item_key, 0, item_locs)
     assert (
         response
-        == f"For some reason there are no locations listed for player3's {item_name}........ sorry!!! There must be something wrong with me :( Please report."
+        == f"For some reason there is no data for player3's {item_name}........ sorry!!! There must be something wrong with me :( Please report."
     )
 
     # None of these should have triggered a hint timestamp to be recorded
