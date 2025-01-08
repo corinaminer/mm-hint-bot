@@ -4,8 +4,8 @@ from enum import Enum
 from typing import List
 
 from consts import IGNORED_ITEMS
-from entrances_handler import Entrances
-from item_location_handler import ItemLocations
+from entrances import Entrances
+from item_locations import ItemLocations
 from utils import canonicalize
 
 log = logging.getLogger(__name__)

@@ -6,9 +6,9 @@ import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 
-from entrances_handler import Entrances
+from entrances import Entrances
 from hint_handler import get_hint_response, set_cooldown
-from item_location_handler import ItemLocations
+from item_locations import ItemLocations
 from search_handler import get_search_response
 from spoiler_log_handler import handle_spoiler_log
 from utils import HintType, get_hint_types
@@ -114,9 +114,7 @@ async def hint_entrance(
 
 
 @bot.command(name="search")
-async def search(
-    ctx, *, query=commands.parameter(description="Search query")
-):
+async def search(ctx, *, query=commands.parameter(description="Search query")):
     """
     Lists items and entrances matching search query. Only returns matches that have the query as an exact substring (case-insensitive).
     """
@@ -184,7 +182,9 @@ async def show_cooldown(
         if HintType.ENTRANCE in hint_types_to_show:
             # TODO Avoid showing entrance cooldown for hint_type "all" if entrance rando is off?
             hint_times = get_entrances(guild_id).hint_times
-            response_lines.append(f"Entrance hint cooldown: {hint_times.cooldown // 60} minutes")
+            response_lines.append(
+                f"Entrance hint cooldown: {hint_times.cooldown // 60} minutes"
+            )
         await ctx.send("\n".join(response_lines))
 
 

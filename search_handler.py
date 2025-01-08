@@ -1,5 +1,5 @@
-from entrances_handler import Entrances
-from item_location_handler import ItemLocations
+from entrances import Entrances
+from item_locations import ItemLocations
 
 
 def get_search_response(

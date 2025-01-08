@@ -4,7 +4,7 @@ import pytest
 
 from consts import BOT_VERSION, VERSION_KEY
 from hint_data import hint_data_filename
-from item_location_handler import ItemLocations
+from item_locations import ItemLocations
 from utils import HintType, load, store
 
 test_guild_id = "test-guild-id"

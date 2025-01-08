@@ -6,7 +6,7 @@ import pytest
 from consts import BOT_VERSION, VERSION_KEY
 from hint_data import DEFAULT_HINT_COOLDOWN_SEC, HintTimes, hint_times_filename
 from hint_handler import get_hint_response
-from item_location_handler import ItemLocations
+from item_locations import ItemLocations
 from utils import HintType, load, store
 
 test_guild_id = "test-guild-id"
