@@ -1,0 +1,47 @@
+A little junk at the beginning
+  Some indented junk too
+
+Settings
+  players: 2
+
+Some more junk after players
+  and indents
+
+
+Entrances
+  World 1
+    MM Clock Tower Platform to MM Clock Tower Roof (MM_CLOCK_TOWER_ROOF)                                -> MM Woodfall Temple from MM Woodfall Front of Temple (MM_TEMPLE_WOODFALL)
+    MM Clock Tower Roof to MM Clock Tower Platform (MM_CLOCK_TOWN_FROM_CLOCK_TOWER_ROOF)                -> MM Woodfall Front of Temple from MM Woodfall Temple (MM_WOODFALL_FROM_TEMPLE)
+    MM Woodfall Front of Temple to MM Woodfall Temple (MM_TEMPLE_WOODFALL)                              -> MM Clock Tower Roof from MM Clock Tower Platform (MM_CLOCK_TOWER_ROOF)
+    MM Woodfall Temple to MM Woodfall Front of Temple (MM_WOODFALL_FROM_TEMPLE)                         -> MM Clock Tower Platform from MM Clock Tower Roof (MM_CLOCK_TOWN_FROM_CLOCK_TOWER_ROOF)
+
+  World 2
+    MM Clock Tower Platform to MM Clock Tower Roof (MM_CLOCK_TOWER_ROOF)                                -> MM Woodfall Temple from MM Woodfall Front of Temple (MM_TEMPLE_WOODFALL)
+    MM Clock Tower Roof to MM Clock Tower Platform (MM_CLOCK_TOWN_FROM_CLOCK_TOWER_ROOF)                -> MM Woodfall Front of Temple from MM Woodfall Temple (MM_WOODFALL_FROM_TEMPLE)
+    MM Woodfall Front of Temple to MM Woodfall Temple (MM_TEMPLE_WOODFALL)                              -> MM Clock Tower Roof from MM Clock Tower Platform (MM_CLOCK_TOWER_ROOF)
+    MM Woodfall Temple to MM Woodfall Front of Temple (MM_WOODFALL_FROM_TEMPLE)                         -> MM Clock Tower Platform from MM Clock Tower Roof (MM_CLOCK_TOWN_FROM_CLOCK_TOWER_ROOF)
+
+Hints
+  there would be a hint section here
+
+===========================================================================
+Spheres
+  there would be spheres here
+
+===========================================================================
+Location List (1945)
+  World 1 (389)
+    Tingle (6):
+      MM Tingle Map Clock Town: Player 1 Progressive Sword (MM)
+      MM Tingle Map Woodfall: Player 1 Light Arrows (MM)
+      MM Tingle Map Snowhead: Player 2 Light Arrows (MM)
+      MM Tingle Map Ranch: Player 2 Red Rupee (MM)
+
+  World 2 (389)
+    Tingle (6):
+      MM Tingle Map Clock Town: Player 1 10 Deku Nuts
+      MM Tingle Map Woodfall: Player 2 Progressive Sword (MM)
+      MM Tingle Map Snowhead: Player 1 Progressive Sword (MM)
+      MM Tingle Map Ranch: Player 2 Progressive Sword (MM)
+
+

@@ -28,11 +28,11 @@ loc_re = re.compile(r"^ {6}MM (.+): Player (\d+) ([^\n]+)$")
 
 
 class SpoilerStep(Enum):
-    FIND_PLAYER_COUNT = "find player count"
-    FIND_ENTRANCES = "find entrances section"
-    PROCESS_ENTRANCES = "process entrances section"
-    FIND_LOCATIONS = "find locations section"
-    PROCESS_LOCATIONS = "process locations section"
+    FIND_PLAYER_COUNT = 1
+    FIND_ENTRANCES_OR_LOCATIONS = 2
+    PROCESS_ENTRANCES = 3
+    FIND_LOCATIONS = 4
+    PROCESS_LOCATIONS = 5
 
     def __str__(self):
         return self.value
@@ -57,12 +57,15 @@ def handle_spoiler_log(
                 if players_match:
                     player_count = int(players_match.group(1))
                     log.debug(f"Found player count {player_count}")
-                    current_step = SpoilerStep.FIND_ENTRANCES
+                    current_step = SpoilerStep.FIND_ENTRANCES_OR_LOCATIONS
                 continue
-            case SpoilerStep.FIND_ENTRANCES:
+            case SpoilerStep.FIND_ENTRANCES_OR_LOCATIONS:
                 if line == "Entrances":
                     current_step = SpoilerStep.PROCESS_ENTRANCES
                     log.debug("Found entrances section")
+                elif loc_list_re.search(line):
+                    current_step = SpoilerStep.PROCESS_LOCATIONS
+                    log.debug("Found location list")
                 continue
             case SpoilerStep.PROCESS_ENTRANCES:
                 world_match = entrance_world_re.search(line)
@@ -162,12 +165,11 @@ def handle_spoiler_log(
     entrances = Entrances(guild_id, entrance_data)
 
     if not len(item_locations):
-        return (
-            f"Failed to {current_step.value}. Could not extract data.",
-            ItemLocations(guild_id, {}),
-            checks,
-            entrances,
-        )
+        if current_step == SpoilerStep.FIND_PLAYER_COUNT:
+            err = "Failed to find player count. Could not extract data."
+        else:
+            err = "Location list is missing or empty. Could not extract data."
+        return err, ItemLocations(guild_id, {}), checks, entrances
 
     item_locs = ItemLocations(guild_id, item_locations)
     if len(unparsed_lines):
