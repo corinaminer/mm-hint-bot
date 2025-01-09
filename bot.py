@@ -99,15 +99,25 @@ async def set_spoiler_log(ctx):
         await ctx.send(result_msg)
 
 
-def get_hint(guild_id, author, hint_type: HintType, player_num, query):
+def infer_player_nums(author_roles):
+    """Get player num(s) from author's roles"""
+    nums = []
+    for role in author_roles:
+        player_num = get_player_number(role.name.lower())
+        if player_num is not None:
+            nums.append(player_num)
+    return nums
+
+
+def get_hint(guild_id, author, hint_type: HintType, player_num: int, query: str):
     if player_num is None:
         # Check for player num in author's roles
-        for role in author.roles:
-            player_num = get_player_number(role.name.lower())
-            if player_num is not None:
-                break
-    if player_num is None:
-        return f'Unable to detect a player ID in your roles. Please specify your player number, e.g. "!hint 3 sword".'
+        player_nums_from_roles = infer_player_nums(author.roles)
+        if not len(player_nums_from_roles):
+            return f'Unable to detect a player ID in your roles. Please specify your player number, e.g. "!hint 3 sword".'
+        player_num = player_nums_from_roles[0]
+        if len(player_nums_from_roles) > 1:
+            return f'You have multiple player roles. Please specify which player number you want to hint, e.g. "!hint {player_num} sword".'
 
     hint_data = get_hint_data(hint_type, guild_id)
     return get_hint_response(player_num, query, author.id, hint_data)
