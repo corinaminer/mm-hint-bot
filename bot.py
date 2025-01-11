@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 from checks import Checks
 from entrances import Entrances
-from hint_handler import get_hint_response, get_player_number, set_cooldown
+from hint_handler import get_hint_response, infer_player_nums, set_cooldown
 from item_locations import ItemLocations
 from search_handler import get_search_response
 from spoiler_log_handler import handle_spoiler_log
@@ -97,16 +97,6 @@ async def set_spoiler_log(ctx):
         guild_data[HintType.CHECK] = checks
         guild_data[HintType.ENTRANCE] = entrances
         await ctx.send(result_msg)
-
-
-def infer_player_nums(author_roles):
-    """Get player num(s) from author's roles"""
-    nums = []
-    for role in author_roles:
-        player_num = get_player_number(role.name.lower())
-        if player_num is not None:
-            nums.append(player_num)
-    return nums
 
 
 def get_hint(guild_id, author, hint_type: HintType, player_num: int, query: str):

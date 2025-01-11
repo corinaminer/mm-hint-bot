@@ -162,7 +162,7 @@ class HintTimes:
         """
         next_hint_time = self.askers.get(asker_id, 0) + self.cooldown
         current_time = int(time.time())
-        if next_hint_time < current_time:
+        if next_hint_time <= current_time:
             # Hint is allowed. Record new hint timestamp.
             self.askers[asker_id] = current_time
             self.save()

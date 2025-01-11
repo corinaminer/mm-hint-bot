@@ -1,6 +1,5 @@
 import logging
 import re
-from typing import Optional
 
 from hint_data import HintData, HintTimes
 
@@ -9,11 +8,14 @@ log = logging.getLogger(__name__)
 player_re = re.compile(r"^@?player(\d+)$")  # player14, @Player14
 
 
-def get_player_number(player: str) -> Optional[int]:
-    match = player_re.search(player.lower())
-    if match:
-        return int(match.group(1))
-    return None
+def infer_player_nums(author_roles):
+    """Get player num(s) from author's roles"""
+    nums = []
+    for role in author_roles:
+        match = player_re.search(role.name.lower())
+        if match:
+            nums.append(int(match.group(1)))
+    return nums
 
 
 def get_hint_response(
@@ -51,5 +53,6 @@ def format_wait_time(wait_time_sec: int) -> str:
 
 
 def set_cooldown(cooldown_min: int, hint_times: HintTimes):
+    cooldown_min = max(cooldown_min, 0)
     if hint_times.cooldown // 60 != cooldown_min:
         hint_times.set_cooldown(cooldown_min)
