@@ -39,6 +39,20 @@ IGNORED_ITEMS = {
     "Owl Statue (Stone Tower)",
 }
 
+LOCATION_NAME_REFORMATS = {
+    "MM_SPIDER_HOUSE_SWAMP": "Swamp Spider House",
+    "MM_SPIDER_HOUSE_OCEAN": "Ocean Spider House",
+    "MM_TEMPLE_WOODFALL": "Woodfall Temple",
+    "MM_BOSS_TEMPLE_WOODFALL": "Woodfall Temple Boss",
+    "MM_TEMPLE_SNOWHEAD": "Snowhead Temple",
+    "MM_BOSS_TEMPLE_SNOWHEAD": "Snowhead Temple Boss",
+    "MM_TEMPLE_GREAT_BAY": "Great Bay Temple",
+    "MM_BOSS_TEMPLE_GREAT_BAY": "Great Bay Temple Boss",
+    "MM_TEMPLE_STONE_TOWER": "Stone Tower Temple",
+    "MM_TEMPLE_STONE_TOWER_INVERTED": "Inverted Stone Tower Temple",
+    "MM_BOSS_TEMPLE_STONE_TOWER": "Stone Tower Temple Boss",
+}
+
 STANDARD_ITEM_ALIASES = {
     "bow": "heros bow",
     "bremen": "bremen mask",
@@ -99,20 +113,13 @@ STANDARD_CHECK_ALIASES = {
 }
 
 STANDARD_LOCATION_ALIASES = {
-    "gbt": "temple great bay",
-    "great bay temple": "temple great bay",
-    "istt": "temple stone tower inverted",
-    "inverted stone tower temple": "temple stone tower inverted",
-    "osh": "spider house ocean",
-    "ocean spider house": "spider house ocean",
+    "gbt": "great bay temple",
+    "istt": "inverted stone tower temple",
+    "osh": "ocean spider house",
     "pf": "pirate fortress",
     "pirates fortress": "pirate fortress",
-    "sht": "temple snowhead",
-    "snowhead temple": "temple snowhead",
-    "ssh": "spider house swamp",
-    "swamp spider house": "spider house swamp",
-    "stt": "temple stone tower",
-    "stone tower temple": "temple stone tower",
-    "wft": "temple woodfall",
-    "woodfall temple": "temple woodfall",
+    "sht": "snowhead temple",
+    "ssh": "swamp spider house",
+    "stt": "stone tower temple",
+    "wft": "woodfall temple",
 }

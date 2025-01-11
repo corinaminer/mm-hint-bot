@@ -85,8 +85,8 @@ Entrances
     assert resp == "Location list is missing or empty. Could not extract data."
     assert item_locs.items == {} and checks.items == {}
     assert entrances.items == {
-        "temple woodfall": {
-            HintData.NAME_KEY: "Temple Woodfall",
+        "woodfall temple": {
+            HintData.NAME_KEY: "Woodfall Temple",  # reformatted from LOCATION_NAME_REFORMATS
             HintData.RESULTS_KEY: [
                 ["Clock Tower Platform to Clock Tower Roof"],
                 ["Clock Tower Platform to Clock Tower Roof"],
@@ -163,25 +163,11 @@ def test_complete_spoiler():
                 ["Woodfall Front of Temple to Woodfall Temple"],
             ],
         },
-        "clock town from clock tower roof": {
-            HintData.NAME_KEY: "Clock Town From Clock Tower Roof",
-            HintData.RESULTS_KEY: [
-                ["Woodfall Temple to Woodfall Front of Temple"],
-                ["Woodfall Temple to Woodfall Front of Temple"],
-            ],
-        },
-        "temple woodfall": {
-            HintData.NAME_KEY: "Temple Woodfall",
+        "woodfall temple": {
+            HintData.NAME_KEY: "Woodfall Temple",
             HintData.RESULTS_KEY: [
                 ["Clock Tower Platform to Clock Tower Roof"],
                 ["Clock Tower Platform to Clock Tower Roof"],
-            ],
-        },
-        "woodfall from temple": {
-            HintData.NAME_KEY: "Woodfall From Temple",
-            HintData.RESULTS_KEY: [
-                ["Clock Tower Roof to Clock Tower Platform"],
-                ["Clock Tower Roof to Clock Tower Platform"],
             ],
         },
     }

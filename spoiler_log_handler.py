@@ -4,7 +4,7 @@ from enum import Enum
 from typing import List
 
 from checks import Checks
-from consts import IGNORED_ITEMS
+from consts import IGNORED_ITEMS, LOCATION_NAME_REFORMATS
 from entrances import Entrances
 from hint_data import HintData
 from item_locations import ItemLocations
@@ -77,8 +77,14 @@ def handle_spoiler_log(
 
                 entrance_match = entrance_re.search(line)
                 if entrance_match:
-                    loc_words = entrance_match.group(6).replace("MM_", "").split("_")
-                    loc_name = " ".join(w[0] + w[1:].lower() for w in loc_words)
+                    loc = entrance_match.group(6)
+                    if "_FROM_" in loc:
+                        # Assumes an entrance leading from X to Y will take you back to X if you return through it
+                        continue
+                    loc_name = LOCATION_NAME_REFORMATS.get(loc)
+                    if loc_name is None:
+                        loc_words = loc.replace("MM_", "").split("_")
+                        loc_name = " ".join(w.capitalize() for w in loc_words)
                     loc_key = canonicalize(loc_name)
                     # Locations are 1:1 with entrances, but put each entrance in a list to conform with HintData format
                     if loc_key not in entrance_data:
