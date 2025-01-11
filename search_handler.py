@@ -22,15 +22,13 @@ def get_search_response(
         # Entrances may be empty if not randomized
         matching_locs = []
 
-    item_matches = (
-        f"**Items:** {', '.join(matching_items)}" if len(matching_items) else ""
-    )
-    check_matches = (
-        f"**Checks:** {', '.join(matching_checks)}" if len(matching_checks) else ""
-    )
-    loc_matches = (
-        f"**Locations:** {', '.join(matching_locs)}" if len(matching_locs) else ""
-    )
-    if not len(item_matches) and not len(check_matches) and not len(loc_matches):
-        return "No matching items, checks, or entrances. Note that this command only finds matches that contain your query as an exact substring (case-insensitive)."
-    return "\n".join([item_matches, check_matches, loc_matches])
+    if not len(matching_items) and not len(matching_checks) and not len(matching_locs):
+        return "No matching items, checks, or entrances."
+    response = ""
+    if len(matching_items):
+        response += f"**Items:** {', '.join(matching_items)}\n"
+    if len(matching_checks):
+        response += f"**Checks:** {', '.join(matching_checks)}\n"
+    if len(matching_locs):
+        response += f"**Locations:** {', '.join(matching_locs)}\n"
+    return response

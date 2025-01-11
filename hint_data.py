@@ -71,11 +71,14 @@ class HintData:
         if not len(self.items):
             raise FileNotFoundError
         query = canonicalize(query)
-        return [
-            hint_result[HintData.NAME_KEY]
-            for item_key, hint_result in self.items.items()
-            if query in item_key
-        ]
+        results = set()
+        for item_key, hint_result in self.items.items():
+            if query in item_key:
+                results.add(hint_result[HintData.NAME_KEY])
+        for alias, item_key in self.aliases.items():
+            if query in alias:
+                results.add(self.items[item_key][HintData.NAME_KEY])
+        return sorted(results)
 
     def get_item_key(self, query) -> Optional[str]:
         query = canonicalize(query)

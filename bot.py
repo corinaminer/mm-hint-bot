@@ -178,7 +178,7 @@ async def hint_entrance(
 @bot.command(name="search")
 async def search(ctx, *, query=commands.parameter(description="Search query")):
     """
-    Lists items, checks, and entrances matching search query. Only returns matches that have the query as an exact substring (case-insensitive).
+    Lists items, checks, and entrances matching search query.
     """
     guild_id = ctx.guild.id
     response = get_search_response(
