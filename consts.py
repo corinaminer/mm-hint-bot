@@ -73,8 +73,15 @@ STANDARD_ITEM_ALIASES = {
 }
 
 STANDARD_CHECK_ALIASES = {
+    "soundcheck": "milk bar troupe leader mask",
+    "sound check": "milk bar troupe leader mask",
     "anju and kafei": "stock pot inn couples mask",
     "gossips": "termina field gossip stones hp",
+    "gorman race": "gorman track garo mask",
+    "grog": "cucco shack bunny mask",
+    "lemons": "cucco shack bunny mask",
+    "aliens": "romani ranch aliens",
+    "cremia": "romani ranch cremia escort",
     "boat archery": "tourist information boat archery",
     "butler": "deku shrine mask of scents",
     "hungry goron": "mountain village don gero mask",
