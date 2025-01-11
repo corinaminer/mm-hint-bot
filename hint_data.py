@@ -50,7 +50,9 @@ class HintData:
             except FileNotFoundError:
                 items = {}
         self.items: dict[str, dict] = items
-        self.aliases: dict[str, str] = self.generate_aliases()
+        self.aliases: dict[str, str] = (
+            self.generate_aliases() if len(self.items) else {}
+        )
         self.hint_times: HintTimes = HintTimes(guild_id, hint_type)
         self.save()
 

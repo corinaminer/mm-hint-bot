@@ -16,4 +16,6 @@ class Entrances(HintData):
         for alias, item_key in STANDARD_LOCATION_ALIASES.items():
             if item_key in self.items:
                 aliases[alias] = item_key
+            else:
+                log.debug(f"Skipping alias {alias}: No such item key as {item_key}")
         return aliases
