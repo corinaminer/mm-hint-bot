@@ -42,19 +42,26 @@ class HintData:
     """
 
     def __init__(self, guild_id, hint_type: HintType, items: dict[str, dict] = None):
+        """
+        Creates hint data with the given hint type. If item data is given, a hint data file is saved. Otherwise,
+        data is populated from existing file (or empty if no file exists).
+        """
         self.hint_type: HintType = hint_type
         self.filename: str = hint_data_filename(guild_id, hint_type)
-        if items is None:
+        self.hint_times: HintTimes = HintTimes(guild_id, hint_type)
+
+        if items is not None:
+            self.items = items
+            self.save()
+        else:
             try:
-                items = self._get_items_from_file()
+                self.items = self._get_items_from_file()
             except FileNotFoundError:
-                items = {}
-        self.items: dict[str, dict] = items
+                self.items = {}
+
         self.aliases: dict[str, str] = (
             self.generate_aliases() if len(self.items) else {}
         )
-        self.hint_times: HintTimes = HintTimes(guild_id, hint_type)
-        self.save()
 
     def _get_items_from_file(self) -> dict[str, dict]:
         data = load(self.filename)
