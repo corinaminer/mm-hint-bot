@@ -1,11 +1,17 @@
 import os
-import time
 
 import pytest
 
+from checks import Checks
 from consts import BOT_VERSION, VERSION_KEY
+from guild import Guild
 from hint_data import DEFAULT_HINT_COOLDOWN_SEC, HintTimes, hint_times_filename
-from hint_handler import get_hint_response, infer_player_nums, set_cooldown
+from hint_handler import (
+    get_hint,
+    get_hint_response,
+    get_hint_without_type,
+    infer_player_num,
+)
 from item_locations import ItemLocations
 from utils import HintType, load, store
 
@@ -44,14 +50,124 @@ class MockRole:
         self.name = name
 
 
-def test_infer_player_nums():
-    def to_roles(role_names: list[str]):
-        return [MockRole(rn) for rn in role_names]
+class MockAuthor:
+    def __init__(self, id, *roles: str):
+        self.id = id
+        self.roles = [MockRole(r) for r in roles]
 
-    assert infer_player_nums([]) == []
-    assert infer_player_nums(to_roles(["foo", "bar", "player"])) == []
-    assert infer_player_nums(to_roles(["player5"])) == [5]
-    assert infer_player_nums(to_roles(["Player5", "Player15"])) == [5, 15]
+
+def test_infer_player_nums():
+    with pytest.raises(
+        ValueError,
+        match='Unable to infer player number from your roles. Please specify your player number, e.g. "!hint 3 sword".',
+    ):
+        infer_player_num([])
+
+    with pytest.raises(
+        ValueError,
+        match='Unable to infer player number from your roles. Please specify your player number, e.g. "!hint 3 sword".',
+    ):
+        infer_player_num([MockRole("foo"), MockRole("player01")])
+
+    with pytest.raises(
+        ValueError,
+        match='You have multiple player roles. Please specify player number to hint, e.g. "!hint 5 sword".',
+    ):
+        infer_player_num([MockRole("Player5"), MockRole("Player15")])
+
+    assert infer_player_num([MockRole("player5")]) == 5
+    assert infer_player_num([MockRole("Player15")]) == 15
+    assert infer_player_num([MockRole("@Player10")]) == 10
+    assert infer_player_num([MockRole("player 10")]) == 10
+
+
+def test_get_hint_without_type():
+    item_locs = ItemLocations(
+        test_guild_id,
+        {
+            "foo": {
+                ItemLocations.NAME_KEY: "Foo",
+                ItemLocations.RESULTS_KEY: [["p1 result"]],
+            },
+            "bars baz": {
+                ItemLocations.NAME_KEY: "Bar's Baz",
+                ItemLocations.RESULTS_KEY: [["p1 result"]],
+            },
+        },
+    )
+    checks = Checks(
+        test_guild_id,
+        {
+            "foo": {
+                Checks.NAME_KEY: "Foo",
+                Checks.RESULTS_KEY: [["p1 result"]],
+            },
+            "bar baz": {
+                Checks.NAME_KEY: "Bar Baz",
+                Checks.RESULTS_KEY: [["p1 result"]],
+            },
+        },
+    )
+    g = Guild(test_guild_id, item_locs, checks, None)
+    author = MockAuthor(1)
+
+    # Should fail if query matches item keys in two hint types
+    duplicate_keys = get_hint_without_type(g, "foo", author, 1)
+    assert (
+        duplicate_keys
+        == "Both item and check hints can match foo. Please use !hint-item or !hint-check."
+    )
+
+    match_key_and_alias = get_hint_without_type(g, "bar baz", author, 1)
+    assert (
+        match_key_and_alias
+        == "Both item and check hints can match bar baz. Please use !hint-item or !hint-check."
+    )
+
+    # Should fail if no item key matches query
+    no_match = get_hint_without_type(g, "no match", author, 1)
+    assert (
+        no_match == "Query no match not recognized. Try !search <keyword> to find it!"
+    )
+
+    # Should identify correct hint type, even if that type is disabled
+    g.metadata.disable_hint_types([HintType.ITEM])
+    hint_disabled = get_hint_without_type(g, "bars baz", author, 1)
+    assert hint_disabled == "Item hints are not currently enabled."
+
+    # Test successful call
+    g.metadata.enable_hint_types([HintType.ITEM])
+    success = get_hint_without_type(g, "bars baz", author, 1)
+    assert success == "p1 result"
+
+
+def test_get_hint():
+    item_locs = ItemLocations(
+        test_guild_id,
+        {
+            "foo": {
+                ItemLocations.NAME_KEY: "Foo",
+                ItemLocations.RESULTS_KEY: [["p1 result"], ["p2 result"]],
+            }
+        },
+    )
+    item_locs.hint_times.set_cooldown(0)
+    author_with_role = MockAuthor(1, "player1")
+    author_without_role = MockAuthor(2)
+
+    hint_type_disabled = get_hint(
+        item_locs, {HintType.ITEM}, author_with_role, None, "foo"
+    )
+    assert hint_type_disabled == "Item hints are not currently enabled."
+
+    no_player_num = get_hint(
+        item_locs, {HintType.CHECK}, author_without_role, None, "foo"
+    )
+    assert no_player_num.startswith("Unable to infer player number from your roles.")
+
+    # Provided player num should take precedence over player num in roles
+    assert get_hint(item_locs, set(), author_with_role, 2, "foo") == "p2 result"
+    assert get_hint(item_locs, set(), author_with_role, None, "foo") == "p1 result"
 
 
 def test_get_hint_response_failures():
@@ -109,35 +225,6 @@ def test_get_hint_response():
     # Test response with multiple locations
     response = get_hint_response(2, item_key, 4, item_locs)
     assert response == "\n".join(player2_locs)  # player2 has two locations
-
-
-def test_set_cooldown():
-    hint_times = HintTimes(test_guild_id, HintType.ITEM)
-    assert hint_times.cooldown == DEFAULT_HINT_COOLDOWN_SEC
-
-    # run 2 hints, second should be denied
-    assert hint_times.attempt_hint("0") == 0  # first hint is allowed
-    hint_time = time.time()
-    approx_next_hint_time = hint_time + DEFAULT_HINT_COOLDOWN_SEC
-    next_hint_timestamp = hint_times.attempt_hint("0")
-    assert approx_next_hint_time - 5 < next_hint_timestamp <= approx_next_hint_time
-
-    # change cooldown to 0 and ask again
-    set_cooldown(0, hint_times)
-    assert hint_times.cooldown == 0
-    assert hint_times.attempt_hint("0") == 0  # a second hint is allowed
-    hint_time = time.time()
-
-    # increase cooldown, hint should be denied again
-    set_cooldown(5, hint_times)
-    assert hint_times.cooldown == 5 * 60
-    approx_next_hint_time = hint_time + 5 * 60
-    next_hint_timestamp = hint_times.attempt_hint("0")
-    assert approx_next_hint_time - 5 < next_hint_timestamp <= approx_next_hint_time
-
-    # Setting cooldown to a negative number should set it to 0
-    set_cooldown(-10, hint_times)
-    assert hint_times.cooldown == 0
 
 
 def test_unknown_version():

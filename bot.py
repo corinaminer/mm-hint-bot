@@ -6,10 +6,8 @@ import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 
-from checks import Checks
-from entrances import Entrances
-from hint_handler import get_hint_response, infer_player_nums, set_cooldown
-from item_locations import ItemLocations
+from guild import Guild
+from hint_handler import get_hint, get_hint_without_type
 from search_handler import get_search_response
 from spoiler_log_handler import handle_spoiler_log
 from utils import HintType, get_hint_types
@@ -38,41 +36,13 @@ hint_type_param = commands.parameter(
 
 # Cache tracking spoiler & hint data for each guild
 # TODO: Periodically clear old cache items if a lot of guilds start using me :o
-guilds = {}
+guilds: dict[str, Guild] = {}
 
 
-def create_hint_data(hint_type: HintType, guild_id):
-    match hint_type:
-        case HintType.ITEM:
-            return ItemLocations(guild_id)
-        case HintType.CHECK:
-            return Checks(guild_id)
-        case HintType.ENTRANCE:
-            return Entrances(guild_id)
-        case _:
-            raise ValueError(hint_type)
-
-
-def get_hint_data(hint_type: HintType, guild_id):
-    guild_data = guilds.setdefault(guild_id, {})
-    hint_data = guild_data.get(hint_type)
-    if hint_data is None:
-        log.debug(f"creating {hint_type} data")
-        hint_data = create_hint_data(hint_type, guild_id)
-        guild_data[hint_type] = hint_data
-    return hint_data
-
-
-def get_item_locations(guild_id) -> ItemLocations:
-    return get_hint_data(HintType.ITEM, guild_id)
-
-
-def get_checks(guild_id) -> Checks:
-    return get_hint_data(HintType.CHECK, guild_id)
-
-
-def get_entrances(guild_id) -> Entrances:
-    return get_hint_data(HintType.ENTRANCE, guild_id)
+def get_guild_data(guild_id):
+    if guild_id not in guilds:
+        guilds[guild_id] = Guild(guild_id)
+    return guilds[guild_id]
 
 
 @bot.command(name="set-log")
@@ -92,25 +62,8 @@ async def set_spoiler_log(ctx):
         result_msg, item_locs, checks, entrances = handle_spoiler_log(
             spoiler_lines, guild_id
         )
-        guild_data = guilds.setdefault(guild_id, {})
-        guild_data[HintType.ITEM] = item_locs
-        guild_data[HintType.CHECK] = checks
-        guild_data[HintType.ENTRANCE] = entrances
+        guilds[guild_id] = Guild(guild_id, item_locs, checks, entrances)
         await ctx.send(result_msg)
-
-
-def get_hint(guild_id, author, hint_type: HintType, player_num: int, query: str):
-    if player_num is None:
-        # Check for player num in author's roles
-        player_nums_from_roles = infer_player_nums(author.roles)
-        if not len(player_nums_from_roles):
-            return f'Unable to detect a player ID in your roles. Please specify your player number, e.g. "!hint 3 sword".'
-        player_num = player_nums_from_roles[0]
-        if len(player_nums_from_roles) > 1:
-            return f'You have multiple player roles. Please specify which player number you want to hint, e.g. "!hint {player_num} sword".'
-
-    hint_data = get_hint_data(hint_type, guild_id)
-    return get_hint_response(player_num, query, author.id, hint_data)
 
 
 @bot.command(name="hint")
@@ -121,23 +74,8 @@ async def hint(
     query: str = commands.parameter(description="Item, check, or location to look up"),
 ):
     """Reveals location(s) of a given item, result of a given check, or entrance to a given location."""
-    item_key, hint_type, error = None, None, None
-    for ht in get_hint_types("all"):
-        item_key_for_type = get_hint_data(ht, ctx.guild.id).get_item_key(query)
-        if item_key_for_type is not None:
-            if item_key is not None:
-                error = f"Both {hint_type} and {ht} hints can match {query}. Please use !hint-{hint_type} or !hint-{ht}."
-                break
-            item_key, hint_type = item_key_for_type, ht
-
-    if error:
-        await ctx.send(error)
-    elif item_key is None:
-        await ctx.send(
-            f"Query {query} not recognized as an item, check, or location. Try !search <keyword> to find it!"
-        )
-    else:
-        await ctx.send(get_hint(ctx.guild.id, ctx.author, hint_type, player, item_key))
+    g = get_guild_data(ctx.guild.id)
+    await ctx.send(get_hint_without_type(g, query, ctx.author, player))
 
 
 @bot.command(name="hint-item")
@@ -148,7 +86,9 @@ async def hint_item(
     item: str = commands.parameter(description="Item to look up"),
 ):
     """Reveals location(s) of the given item for the given player."""
-    await ctx.send(get_hint(ctx.guild.id, ctx.author, HintType.ITEM, player, item))
+    g = get_guild_data(ctx.guild.id)
+    disabled = g.metadata.disabled_hint_types
+    await ctx.send(get_hint(g.item_locations, disabled, ctx.author, player, item))
 
 
 @bot.command(name="hint-check")
@@ -159,7 +99,9 @@ async def hint_check(
     check: str = commands.parameter(description="Check to look up"),
 ):
     """Reveals item at the given check for the given player."""
-    await ctx.send(get_hint(ctx.guild.id, ctx.author, HintType.CHECK, player, check))
+    g = get_guild_data(ctx.guild.id)
+    disabled = g.metadata.disabled_hint_types
+    await ctx.send(get_hint(g.checks, disabled, ctx.author, player, check))
 
 
 @bot.command(name="hint-entrance")
@@ -170,9 +112,9 @@ async def hint_entrance(
     location: str = commands.parameter(description="Location to look up"),
 ):
     """Reveals entrance to the given location for the given player."""
-    await ctx.send(
-        get_hint(ctx.guild.id, ctx.author, HintType.ENTRANCE, player, location)
-    )
+    g = get_guild_data(ctx.guild.id)
+    disabled = g.metadata.disabled_hint_types
+    await ctx.send(get_hint(g.entrances, disabled, ctx.author, player, location))
 
 
 @bot.command(name="search")
@@ -180,12 +122,13 @@ async def search(ctx, *, query=commands.parameter(description="Search query")):
     """
     Lists items, checks, and entrances matching search query.
     """
-    guild_id = ctx.guild.id
+    g = get_guild_data(ctx.guild.id)
     response = get_search_response(
         query,
-        get_item_locations(guild_id),
-        get_checks(guild_id),
-        get_entrances(guild_id),
+        # TODO Limit to enabled hint types?
+        g.item_locations,
+        g.checks,
+        g.entrances,
     )
     if len(response) >= 2000:
         # (actually discord limits the bot's messages to <2000 characters)
@@ -206,18 +149,20 @@ async def set_hint_cooldown(
     """
     Sets hint cooldown time in minutes. Admin-only.
     """
-    guild_id = ctx.guild.id
     hint_types_to_change = get_hint_types(hint_type)
     if not len(hint_types_to_change):
         await ctx.send(f"Unrecognized hint type '{hint_type}'.")
     else:
+        # TODO: Should set-cooldown apply to disabled hint types?
+        #  What about set-cooldown specifically for a disabled type?
         cooldown = max(cooldown, 0)
+        g = get_guild_data(ctx.guild.id)
         if HintType.ITEM in hint_types_to_change:
-            set_cooldown(cooldown, get_item_locations(guild_id).hint_times)
+            g.item_locations.hint_times.set_cooldown(cooldown)
         if HintType.CHECK in hint_types_to_change:
-            set_cooldown(cooldown, get_checks(guild_id).hint_times)
+            g.checks.hint_times.set_cooldown(cooldown)
         if HintType.ENTRANCE in hint_types_to_change:
-            set_cooldown(cooldown, get_entrances(guild_id).hint_times)
+            g.entrances.hint_times.set_cooldown(cooldown)
 
         cooldown_str = f"{cooldown} minute{'s' if cooldown != 1 else ''}"
         if len(hint_types_to_change) == 1:
@@ -231,19 +176,55 @@ async def show_cooldown(ctx, hint_type: str = hint_type_param):
     """
     Shows hint cooldown time for the given hint type, or all by default.
     """
-    guild_id = ctx.guild.id
-    hint_types_to_show: list[HintType] = get_hint_types(hint_type)
-    if not len(hint_types_to_show):
+    specified_hint_types: list[HintType] = get_hint_types(hint_type)
+    if not len(specified_hint_types):
         await ctx.send(f"Unrecognized hint type '{hint_type}'.")
     else:
+        g = get_guild_data(ctx.guild.id)
         response_lines = []
-        for ht in hint_types_to_show:
-            # TODO Avoid showing entrance cooldown for hint_type "all" if entrance rando is off?
-            cooldown = get_hint_data(ht, guild_id).hint_times.cooldown // 60
-            response_lines.append(
-                f"{ht.value.capitalize()} hint cooldown: {cooldown} minute{'s' if cooldown != 1 else ''}"
-            )
+        for ht in specified_hint_types:
+            # TODO Avoid showing entrance cooldown if entrance rando is off?
+            cooldown = g.get_hint_data(ht).hint_times.cooldown // 60
+            resp = f"{ht.value.capitalize()} hint cooldown: {cooldown} minute{'s' if cooldown != 1 else ''}"
+            if ht in g.metadata.disabled_hint_types:
+                resp += " [disabled]"
+            response_lines.append(resp)
         await ctx.send("\n".join(response_lines))
+
+
+@bot.command(name="enable")
+@commands.has_role(ADMIN_ROLE_NAME)
+async def enable_hints(ctx, hint_type: str = hint_type_param):
+    """Enables the given hint type, or all by default. Admin-only."""
+    g = get_guild_data(ctx.guild.id)
+    specified_hint_types: list[HintType] = get_hint_types(hint_type)
+    if not len(specified_hint_types):
+        await ctx.send(f"Unrecognized hint type '{hint_type}'.")
+    elif g.metadata.enable_hint_types(specified_hint_types):
+        if hint_type == "all":
+            await ctx.send("Hints enabled.")
+        else:
+            await ctx.send(f"{hint_type.capitalize()} hints enabled.")
+    else:
+        await ctx.send(f"{hint_type.capitalize()} hints are already enabled.")
+
+
+@bot.command(name="disable")
+@commands.has_role(ADMIN_ROLE_NAME)
+async def disable_hints(ctx, hint_type: str = hint_type_param):
+    """Disables the given hint type, or all by default. Admin-only."""
+    g = get_guild_data(ctx.guild.id)
+    specified_hint_types: list[HintType] = get_hint_types(hint_type)
+    if not len(specified_hint_types):
+        await ctx.send(f"Unrecognized hint type '{hint_type}'.")
+    else:
+        if g.metadata.disable_hint_types(specified_hint_types):
+            if hint_type == "all":
+                await ctx.send("Hints disabled.")
+            else:
+                await ctx.send(f"{hint_type.capitalize()} hints disabled.")
+        else:
+            await ctx.send(f"{hint_type.capitalize()} hints are already disabled.")
 
 
 @bot.event

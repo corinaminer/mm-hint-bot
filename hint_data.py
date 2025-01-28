@@ -182,5 +182,7 @@ class HintTimes:
         return int(next_hint_time)
 
     def set_cooldown(self, cooldown_min: int):
-        self.cooldown = cooldown_min * 60
-        self.save()
+        new_cooldown = cooldown_min * 60
+        if self.cooldown != new_cooldown:
+            self.cooldown = new_cooldown
+            self.save()

@@ -1,21 +1,70 @@
 import logging
 import re
+from typing import Optional
 
-from hint_data import HintData, HintTimes
+from guild import Guild
+from hint_data import HintData
+from utils import HintType
 
 log = logging.getLogger(__name__)
 
-player_re = re.compile(r"^@?player(\d+)$")  # player14, @Player14
+player_re = re.compile(r"^@?player ?([1-9]\d*)$")  # player14, @Player14
 
 
-def infer_player_nums(author_roles):
+def infer_player_num(author_roles):
     """Get player num(s) from author's roles"""
-    nums = []
+    player_num = None
     for role in author_roles:
         match = player_re.search(role.name.lower())
         if match:
-            nums.append(int(match.group(1)))
-    return nums
+            if player_num is not None:
+                raise ValueError(
+                    f'You have multiple player roles. Please specify player number to hint, e.g. "!hint {player_num} sword".'
+                )
+            player_num = int(match.group(1))
+    if player_num is None:
+        raise ValueError(
+            'Unable to infer player number from your roles. Please specify your player number, e.g. "!hint 3 sword".'
+        )
+    return player_num
+
+
+def get_hint_without_type(g: Guild, query: str, author, player: Optional[int]) -> str:
+    item_key, hint_data = None, None
+    for ht in HintType:
+        hint_data_for_type = g.get_hint_data(ht)
+        item_key_for_type = hint_data_for_type.get_item_key(query)
+        if item_key_for_type is not None:
+            if item_key is not None:
+                other_ht = hint_data.hint_type
+                return f"Both {other_ht} and {ht} hints can match {query}. Please use !hint-{other_ht} or !hint-{ht}."
+            item_key, hint_data = item_key_for_type, hint_data_for_type
+
+    if item_key is None:
+        return f"Query {query} not recognized. Try !search <keyword> to find it!"
+    return get_hint(hint_data, g.metadata.disabled_hint_types, author, player, item_key)
+
+
+def get_hint(
+    hint_data: HintData,
+    disabled_hint_types: set[HintType],
+    author,
+    player_num: Optional[int],
+    query: str,
+):
+    if hint_data.hint_type in disabled_hint_types:
+        return (
+            f"{hint_data.hint_type.value.capitalize()} hints are not currently enabled."
+        )
+
+    if player_num is None:
+        # Check for player num in author's roles
+        try:
+            player_num = infer_player_num(author.roles)
+        except ValueError as err:
+            return err.args[0]
+
+    return get_hint_response(player_num, query, author.id, hint_data)
 
 
 def get_hint_response(
@@ -50,9 +99,3 @@ def format_wait_time(wait_time_sec: int) -> str:
     hr = m // 60
     m %= 60
     return f"{hr}:{m:02}:{s:02}"
-
-
-def set_cooldown(cooldown_min: int, hint_times: HintTimes):
-    cooldown_min = max(cooldown_min, 0)
-    if hint_times.cooldown // 60 != cooldown_min:
-        hint_times.set_cooldown(cooldown_min)
