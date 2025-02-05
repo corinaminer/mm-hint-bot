@@ -90,6 +90,7 @@ class HintData:
         return sorted(results)
 
     def get_item_key(self, query) -> Optional[str]:
+        """Returns the item key matching the hint query, or None if it doesn't match a key or alias."""
         query = canonicalize(query)
         if query in self.items:
             return query

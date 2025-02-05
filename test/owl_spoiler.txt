@@ -1,0 +1,28 @@
+  players: 1
+
+===========================================================================
+Location List (21948)
+  World 1 (1829)
+    Area 1 (10):
+      MM Clock Town Owl Statue: Player 1 Nothing
+      MM Milk Road Owl Statue: Player 1 Nothing
+      MM Southern Swamp Owl Statue: Player 1 Nothing
+      MM Woodfall Owl Statue: Player 1 Nothing
+      MM Mountain Village Owl Statue: Player 1 Nothing
+      MM Snowhead Owl Statue: Player 1 Nothing
+      MM Great Bay Coast Owl Statue: Player 1 Nothing
+      MM Zora Cape Owl Statue: Player 1 Nothing
+      MM Ikana Canyon Owl Statue: Player 1 Nothing
+      MM Stone Tower Owl Statue: Player 1 Nothing
+
+    Area 2 (10):
+      MM Location 1: Player 1 Owl Statue (Clock Town)
+      MM Location 2: Player 1 Owl Statue (Milk Road)
+      MM Location 3: Player 1 Owl Statue (Southern Swamp)
+      MM Location 4: Player 1 Owl Statue (Woodfall)
+      MM Location 5: Player 1 Owl Statue (Mountain Village)
+      MM Location 6: Player 1 Owl Statue (Snowhead)
+      MM Location 7: Player 1 Owl Statue (Great Bay)
+      MM Location 8: Player 1 Owl Statue (Zora Cape)
+      MM Location 9: Player 1 Owl Statue (Ikana Canyon)
+      MM Location 10: Player 1 Owl Statue (Stone Tower)

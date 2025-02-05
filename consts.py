@@ -27,16 +27,6 @@ IGNORED_ITEMS = {
     "Green Potion",
     "Ocean Skulltula Token",
     "Swamp Skulltula Token",
-    "Owl Statue (Clock Town)",
-    "Owl Statue (Milk Road)",
-    "Owl Statue (Southern Swamp)",
-    "Owl Statue (Woodfall)",
-    "Owl Statue (Mountain Village)",
-    "Owl Statue (Snowhead)",
-    "Owl Statue (Great Bay)",
-    "Owl Statue (Zora Cape)",
-    "Owl Statue (Ikana Canyon)",
-    "Owl Statue (Stone Tower)",
 }
 
 LOCATION_NAME_REFORMATS = {
