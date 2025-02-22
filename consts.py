@@ -58,6 +58,8 @@ STANDARD_ITEM_ALIASES = {
     "kamaro": "kamaros mask",
     "kamaros": "kamaros mask",
     "keaton": "keaton mask",
+    "keg": "powder keg",
+    "kegw": "powder keg",
     "pig mask": "mask of scents",
     "sniffa": "mask of scents",
     "deku": "deku mask",
@@ -100,6 +102,8 @@ STANDARD_CHECK_ALIASES = {
     "fisherman": "great bay coast fisherman hp",
     "dampe": "beneath the graveyard dampe chest",
     "pamela": "music box house gibdo mask",
+    "pamela's father": "music box house gibdo mask",
+    "poe hut": "ghost hut hp",
 }
 
 STANDARD_LOCATION_ALIASES = {
