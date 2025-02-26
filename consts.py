@@ -76,6 +76,16 @@ STANDARD_ITEM_ALIASES = {
     "strength": "progressive strength",
     "sword": "progressive sword",
     "wallet": "progressive wallet",
+    "fire": "fire arrows",
+    "fires": "fire arrows",
+    "fa": "fire arrows",
+    "ice": "ice arrows",
+    "ices": "ice arrows",
+    "ia": "ice arrows",
+    "light": "light arrows",
+    "lights": "light arrows",
+    "la": "light arrows",
+    "anm": "all-night mask"
 }
 
 STANDARD_CHECK_ALIASES = {
@@ -104,6 +114,7 @@ STANDARD_CHECK_ALIASES = {
     "pamela": "music box house gibdo mask",
     "pamela's father": "music box house gibdo mask",
     "poe hut": "ghost hut hp",
+    "wart": "great bay temple ice arrow"
 }
 
 STANDARD_LOCATION_ALIASES = {
