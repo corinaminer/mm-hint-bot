@@ -114,7 +114,9 @@ STANDARD_CHECK_ALIASES = {
     "pamela": "music box house gibdo mask",
     "pamela's father": "music box house gibdo mask",
     "poe hut": "ghost hut hp",
-    "wart": "great bay temple ice arrow"
+    "wart": "great bay temple ice arrow",
+    "gbt wart": "great bay temple ice arrow",
+    "shrine wart": "secret shrine wart chest"
 }
 
 STANDARD_LOCATION_ALIASES = {
