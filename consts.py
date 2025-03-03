@@ -58,6 +58,8 @@ STANDARD_ITEM_ALIASES = {
     "kamaro": "kamaros mask",
     "kamaros": "kamaros mask",
     "keaton": "keaton mask",
+    "keg": "powder keg",
+    "kegw": "powder keg",
     "pig mask": "mask of scents",
     "sniffa": "mask of scents",
     "deku": "deku mask",
@@ -74,6 +76,16 @@ STANDARD_ITEM_ALIASES = {
     "strength": "progressive strength",
     "sword": "progressive sword",
     "wallet": "progressive wallet",
+    "fire": "fire arrows",
+    "fires": "fire arrows",
+    "fa": "fire arrows",
+    "ice": "ice arrows",
+    "ices": "ice arrows",
+    "ia": "ice arrows",
+    "light": "light arrows",
+    "lights": "light arrows",
+    "la": "light arrows",
+    "anm": "allnight mask"
 }
 
 STANDARD_CHECK_ALIASES = {
@@ -100,6 +112,11 @@ STANDARD_CHECK_ALIASES = {
     "fisherman": "great bay coast fisherman hp",
     "dampe": "beneath the graveyard dampe chest",
     "pamela": "music box house gibdo mask",
+    "pamelas father": "music box house gibdo mask",
+    "poe hut": "ghost hut hp",
+    "wart": "great bay temple ice arrow",
+    "gbt wart": "great bay temple ice arrow",
+    "shrine wart": "secret shrine wart chest"
 }
 
 STANDARD_LOCATION_ALIASES = {
