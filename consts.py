@@ -85,7 +85,7 @@ STANDARD_ITEM_ALIASES = {
     "light": "light arrows",
     "lights": "light arrows",
     "la": "light arrows",
-    "anm": "all-night mask"
+    "anm": "allnight mask"
 }
 
 STANDARD_CHECK_ALIASES = {
@@ -112,7 +112,7 @@ STANDARD_CHECK_ALIASES = {
     "fisherman": "great bay coast fisherman hp",
     "dampe": "beneath the graveyard dampe chest",
     "pamela": "music box house gibdo mask",
-    "pamela's father": "music box house gibdo mask",
+    "pamelas father": "music box house gibdo mask",
     "poe hut": "ghost hut hp",
     "wart": "great bay temple ice arrow",
     "gbt wart": "great bay temple ice arrow",
