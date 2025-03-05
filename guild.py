@@ -6,6 +6,7 @@ from checks import Checks
 from consts import BOT_VERSION, VERSION_KEY
 from entrances import Entrances
 from hint_data import HintData
+from hint_times import HintTimes
 from item_locations import ItemLocations
 from utils import HintType, load, store
 
@@ -27,6 +28,7 @@ class Guild:
         self.item_locations = item_locations or ItemLocations(guild_id)
         self.checks = checks or Checks(guild_id)
         self.entrances = entrances or Entrances(guild_id)
+        self.hint_times = HintTimes(guild_id)
 
     def get_hint_data(self, hint_type: HintType) -> HintData:
         match hint_type:

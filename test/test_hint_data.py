@@ -4,7 +4,7 @@ import time
 import pytest
 
 from consts import BOT_VERSION, VERSION_KEY
-from hint_data import DEFAULT_HINT_COOLDOWN_SEC, HintTimes, hint_data_filename
+from hint_data import DEFAULT_HINT_COOLDOWN_SEC, hint_data_filename
 from item_locations import ItemLocations
 from utils import HintType, load, store
 
@@ -103,28 +103,3 @@ def test_unknown_version():
         VERSION_KEY: BOT_VERSION,
         ItemLocations.DATA_KEY: {},
     }
-
-
-def test_hint_times_cooldown():
-    hint_times = HintTimes(test_guild_id, HintType.ITEM)
-    assert hint_times.cooldown == DEFAULT_HINT_COOLDOWN_SEC
-
-    # run 2 hints, second should be denied
-    assert hint_times.attempt_hint("0") == 0  # first hint is allowed
-    hint_time = time.time()
-    approx_next_hint_time = hint_time + DEFAULT_HINT_COOLDOWN_SEC
-    next_hint_timestamp = hint_times.attempt_hint("0")
-    assert approx_next_hint_time - 5 < next_hint_timestamp <= approx_next_hint_time
-
-    # change cooldown to 0 and ask again
-    hint_times.set_cooldown(0)
-    assert hint_times.cooldown == 0
-    assert hint_times.attempt_hint("0") == 0  # a second hint is allowed
-    hint_time = time.time()
-
-    # increase cooldown, hint should be denied again
-    hint_times.set_cooldown(5)
-    assert hint_times.cooldown == 5 * 60
-    approx_next_hint_time = hint_time + 5 * 60
-    next_hint_timestamp = hint_times.attempt_hint("0")
-    assert approx_next_hint_time - 5 < next_hint_timestamp <= approx_next_hint_time

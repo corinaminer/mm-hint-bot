@@ -7,7 +7,7 @@ from discord.ext import commands
 from dotenv import load_dotenv
 
 from guild import Guild
-from hint_handler import get_hint, get_hint_without_type
+from hint_handler import get_hint, get_hint_without_type, get_show_hints_response
 from search_handler import get_search_response
 from spoiler_log_handler import handle_spoiler_log
 from utils import HintType, get_hint_types
@@ -62,7 +62,9 @@ async def set_spoiler_log(ctx):
         result_msg, item_locs, checks, entrances = handle_spoiler_log(
             spoiler_lines, guild_id
         )
-        guilds[guild_id] = Guild(guild_id, item_locs, checks, entrances)
+        g = Guild(guild_id, item_locs, checks, entrances)
+        guilds[guild_id] = g
+        g.hint_times.clear_past_hints()
         await ctx.send(result_msg)
 
 
@@ -88,7 +90,7 @@ async def hint_item(
     """Reveals location(s) of the given item for the given player."""
     g = get_guild_data(ctx.guild.id)
     disabled = g.metadata.disabled_hint_types
-    await ctx.send(get_hint(g.item_locations, disabled, ctx.author, player, item))
+    await ctx.send(get_hint(g.item_locations, g.hint_times, disabled, ctx.author, player, item))
 
 
 @bot.command(name="hint-check")
@@ -101,7 +103,7 @@ async def hint_check(
     """Reveals item at the given check for the given player."""
     g = get_guild_data(ctx.guild.id)
     disabled = g.metadata.disabled_hint_types
-    await ctx.send(get_hint(g.checks, disabled, ctx.author, player, check))
+    await ctx.send(get_hint(g.checks, g.hint_times, disabled, ctx.author, player, check))
 
 
 @bot.command(name="hint-entrance")
@@ -114,7 +116,18 @@ async def hint_entrance(
     """Reveals entrance to the given location for the given player."""
     g = get_guild_data(ctx.guild.id)
     disabled = g.metadata.disabled_hint_types
-    await ctx.send(get_hint(g.entrances, disabled, ctx.author, player, location))
+    await ctx.send(get_hint(g.entrances, g.hint_times, disabled, ctx.author, player, location))
+
+
+@bot.command(name="show-hints")
+async def show_hints(ctx, player: Optional[int] = player_param, hint_type: str = hint_type_param):
+    """Shows past hints redeemed for the given player. Infers player from author roles if not specified."""
+    hint_types: list[HintType] = get_hint_types(hint_type)
+    if not len(hint_types):
+        await ctx.send(f"Unrecognized hint type '{hint_type}'.")
+    else:
+        response = get_show_hints_response(player, ctx.author.roles, hint_types, get_guild_data(ctx.guild.id).hint_times)
+        await ctx.send(response)
 
 
 @bot.command(name="search")
@@ -156,18 +169,13 @@ async def set_hint_cooldown(
         # TODO: Should set-cooldown apply to disabled hint types?
         #  What about set-cooldown specifically for a disabled type?
         cooldown = max(cooldown, 0)
-        g = get_guild_data(ctx.guild.id)
-        if HintType.ITEM in hint_types_to_change:
-            g.item_locations.hint_times.set_cooldown(cooldown)
-        if HintType.CHECK in hint_types_to_change:
-            g.checks.hint_times.set_cooldown(cooldown)
-        if HintType.ENTRANCE in hint_types_to_change:
-            g.entrances.hint_times.set_cooldown(cooldown)
-
         cooldown_str = f"{cooldown} minute{'s' if cooldown != 1 else ''}"
+        hint_times = get_guild_data(ctx.guild.id).hint_times
         if len(hint_types_to_change) == 1:
+            hint_times.set_cooldown(cooldown, hint_types_to_change[0])
             await ctx.send(f"Set {hint_types_to_change[0]} cooldown to {cooldown_str}.")
         else:
+            hint_times.set_all_cooldowns(cooldown)
             await ctx.send(f"Set all hint cooldowns to {cooldown_str}.")
 
 
@@ -184,7 +192,7 @@ async def show_cooldown(ctx, hint_type: str = hint_type_param):
         response_lines = []
         for ht in specified_hint_types:
             # TODO Avoid showing entrance cooldown if entrance rando is off?
-            cooldown = g.get_hint_data(ht).hint_times.cooldown // 60
+            cooldown = g.hint_times.get_cooldown(ht) // 60
             resp = f"{ht.value.capitalize()} hint cooldown: {cooldown} minute{'s' if cooldown != 1 else ''}"
             if ht in g.metadata.disabled_hint_types:
                 resp += " [disabled]"

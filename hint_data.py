@@ -1,5 +1,4 @@
 import logging
-import time
 from typing import Optional
 
 from consts import BOT_VERSION, VERSION_KEY
@@ -12,10 +11,6 @@ DEFAULT_HINT_COOLDOWN_SEC = 30 * 60
 
 def hint_data_filename(guild_id, hint_type: HintType) -> str:
     return f"{guild_id}-{hint_type}.json"
-
-
-def hint_times_filename(guild_id, hint_type: HintType) -> str:
-    return f"{guild_id}-{hint_type}-hint_times.json"
 
 
 class HintData:
@@ -48,7 +43,6 @@ class HintData:
         """
         self.hint_type: HintType = hint_type
         self.filename: str = hint_data_filename(guild_id, hint_type)
-        self.hint_times: HintTimes = HintTimes(guild_id, hint_type)
 
         if items is not None:
             self.items = items
@@ -133,57 +127,3 @@ class HintData:
     def generate_aliases(self):
         # Should be implemented by child classes
         raise NotImplementedError
-
-
-class HintTimes:
-    COOLDOWN_KEY = "cooldown"
-    ASKERS_KEY = "askers"
-
-    def __init__(self, guild_id, hint_type: HintType):
-        self.filename = hint_times_filename(guild_id, hint_type)
-        try:
-            self._init_from_file()
-        except FileNotFoundError:
-            self.cooldown = DEFAULT_HINT_COOLDOWN_SEC
-            self.askers = {}
-
-    def _init_from_file(self):
-        data = load(self.filename)
-        data_version = data.get(VERSION_KEY)
-        if data_version == BOT_VERSION:
-            self.cooldown = data[HintTimes.COOLDOWN_KEY]
-            self.askers = data[HintTimes.ASKERS_KEY]
-        else:
-            # Data in file is outdated or corrupt. If it's a known old version, use it; otherwise ignore it.
-            log.info(
-                f"No protocol for updating hint times filedata with version {data_version}"
-            )
-            raise FileNotFoundError  # will result in default cooldown and no saved askers
-
-    def save(self):
-        filedata = {
-            VERSION_KEY: BOT_VERSION,
-            HintTimes.COOLDOWN_KEY: self.cooldown,
-            HintTimes.ASKERS_KEY: self.askers,
-        }
-        store(filedata, self.filename)
-
-    def attempt_hint(self, asker_id: str) -> int:
-        """
-        Returns timestamp in seconds at which the member is allowed another hint, or 0 if member is currently eligible.
-        When this function returns 0, it also sets the member's last hint time to the current time.
-        """
-        next_hint_time = self.askers.get(asker_id, 0) + self.cooldown
-        current_time = int(time.time())
-        if next_hint_time <= current_time:
-            # Hint is allowed. Record new hint timestamp.
-            self.askers[asker_id] = current_time
-            self.save()
-            return 0
-        return int(next_hint_time)
-
-    def set_cooldown(self, cooldown_min: int):
-        new_cooldown = cooldown_min * 60
-        if self.cooldown != new_cooldown:
-            self.cooldown = new_cooldown
-            self.save()
