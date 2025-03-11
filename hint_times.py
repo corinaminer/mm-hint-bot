@@ -40,6 +40,7 @@ class HintTimes:
         }
     }
     """
+
     COOLDOWNS_KEY = "cooldowns"
     HINT_TIMES_KEY = "hint_times"
     PAST_HINTS_KEY = "past_hints"
@@ -57,13 +58,20 @@ class HintTimes:
         data = load(self.filename)
         data_version = data.get(VERSION_KEY)
         if data_version == BOT_VERSION:
-            self.cooldowns = {HintType(ht): cooldown for ht, cooldown in data[HintTimes.COOLDOWNS_KEY].items()}
+            self.cooldowns = {
+                HintType(ht): cooldown
+                for ht, cooldown in data[HintTimes.COOLDOWNS_KEY].items()
+            }
             self.hint_times = {}
             self.past_hints = {}
             for asker, hint_timestamps in data[HintTimes.HINT_TIMES_KEY].items():
-                self.hint_times[int(asker)] = {HintType(ht): timestamp for ht, timestamp in hint_timestamps.items()}
+                self.hint_times[int(asker)] = {
+                    HintType(ht): timestamp for ht, timestamp in hint_timestamps.items()
+                }
             for player, past_hints in data[HintTimes.PAST_HINTS_KEY].items():
-                self.past_hints[int(player)] = {HintType(ht): hint_list for ht, hint_list in past_hints.items()}
+                self.past_hints[int(player)] = {
+                    HintType(ht): hint_list for ht, hint_list in past_hints.items()
+                }
         else:
             # Data in file is outdated or corrupt. If it's a known old version, use it; otherwise ignore it.
             log.info(
@@ -75,12 +83,18 @@ class HintTimes:
         serialized_hint_times = {}
         serialized_past_hints = {}
         for asker, hint_timestamps in self.hint_times.items():
-            serialized_hint_times[asker] = {str(ht): timestamp for ht, timestamp in hint_timestamps.items()}
+            serialized_hint_times[asker] = {
+                str(ht): timestamp for ht, timestamp in hint_timestamps.items()
+            }
         for player, past_hints in self.past_hints.items():
-            serialized_past_hints[player] = {str(ht): hint_list for ht, hint_list in past_hints.items()}
+            serialized_past_hints[player] = {
+                str(ht): hint_list for ht, hint_list in past_hints.items()
+            }
         filedata = {
             VERSION_KEY: BOT_VERSION,
-            HintTimes.COOLDOWNS_KEY: {str(ht): cooldown for ht, cooldown in self.cooldowns.items()},
+            HintTimes.COOLDOWNS_KEY: {
+                str(ht): cooldown for ht, cooldown in self.cooldowns.items()
+            },
             HintTimes.HINT_TIMES_KEY: serialized_hint_times,
             HintTimes.PAST_HINTS_KEY: serialized_past_hints,
         }
@@ -99,11 +113,15 @@ class HintTimes:
             return 0
         return int(next_hint_time)
 
-    def record_hint(self, asker_id: int, player_num: int, hint_type: HintType, hint_result: str):
+    def record_hint(
+        self, asker_id: int, player_num: int, hint_type: HintType, hint_result: str
+    ):
         # Record current time as the asker's latest hint time
         self.hint_times.setdefault(asker_id, {})[hint_type] = int(time.time())
         # Add hint to past hints if it's not a repeat
-        past_hints = self.past_hints.setdefault(player_num, {}).setdefault(hint_type, [])
+        past_hints = self.past_hints.setdefault(player_num, {}).setdefault(
+            hint_type, []
+        )
         if hint_result not in past_hints:
             past_hints.append(hint_result)
         self.save()

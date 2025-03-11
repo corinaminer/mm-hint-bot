@@ -20,17 +20,22 @@ def infer_player_num(author_roles):
         if match:
             if player_num is not None:
                 raise ValueError(
-                    f'You have multiple player roles. Please specify player number.'
+                    f"You have multiple player roles. Please specify player number."
                 )
             player_num = int(match.group(1))
     if player_num is None:
         raise ValueError(
-            'Unable to infer player number from your roles. Please specify your player number.'
+            "Unable to infer player number from your roles. Please specify your player number."
         )
     return player_num
 
 
-def get_show_hints_response(player: Optional[int], author_roles, hint_types: list[HintType], hint_times: HintTimes) -> str:
+def get_show_hints_response(
+    player: Optional[int],
+    author_roles,
+    hint_types: list[HintType],
+    hint_times: HintTimes,
+) -> str:
     if player is None:
         try:
             player = infer_player_num(author_roles)
@@ -65,7 +70,14 @@ def get_hint_without_type(g: Guild, query: str, author, player: Optional[int]) -
 
     if item_key is None:
         return f"Query {query} not recognized. Try !search <keyword> to find it!"
-    return get_hint(hint_data, g.hint_times, g.metadata.disabled_hint_types, author, player, item_key)
+    return get_hint(
+        hint_data,
+        g.hint_times,
+        g.metadata.disabled_hint_types,
+        author,
+        player,
+        item_key,
+    )
 
 
 def get_hint(
@@ -115,7 +127,12 @@ def get_hint_response(
         return f"Whoa nelly! You can't get another {hint_data.hint_type} hint until <t:{hint_wait_time}:T> -- hold your horses!!"
 
     # Record hint time and hint for player
-    hint_times.record_hint(author_id, player_number, hint_data.hint_type, f"{item_name}: {', '.join(player_locs_for_item)}")
+    hint_times.record_hint(
+        author_id,
+        player_number,
+        hint_data.hint_type,
+        f"{item_name}: {', '.join(player_locs_for_item)}",
+    )
 
     return "\n".join(player_locs_for_item)
 

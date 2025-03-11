@@ -7,7 +7,7 @@ from consts import BOT_VERSION, VERSION_KEY
 from hint_data import DEFAULT_HINT_COOLDOWN_SEC, hint_data_filename
 from hint_times import HintTimes
 from item_locations import ItemLocations
-from utils import HintType, load, store
+from utils import HintType
 
 test_guild_id = "test-guild-id"
 hint_data_filename = hint_data_filename(test_guild_id, HintType.ITEM)

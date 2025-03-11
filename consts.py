@@ -85,7 +85,7 @@ STANDARD_ITEM_ALIASES = {
     "light": "light arrows",
     "lights": "light arrows",
     "la": "light arrows",
-    "anm": "allnight mask"
+    "anm": "allnight mask",
 }
 
 STANDARD_CHECK_ALIASES = {
@@ -116,7 +116,7 @@ STANDARD_CHECK_ALIASES = {
     "poe hut": "ghost hut hp",
     "wart": "great bay temple ice arrow",
     "gbt wart": "great bay temple ice arrow",
-    "shrine wart": "secret shrine wart chest"
+    "shrine wart": "secret shrine wart chest",
 }
 
 STANDARD_LOCATION_ALIASES = {

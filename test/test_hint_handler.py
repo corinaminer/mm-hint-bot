@@ -12,7 +12,7 @@ from hint_handler import (
 )
 from hint_times import HintTimes, hint_times_filename
 from item_locations import ItemLocations
-from utils import HintType, load, store
+from utils import HintType, load
 
 test_guild_id = "test-guild-id"
 hint_times_file = hint_times_filename(test_guild_id)
@@ -58,19 +58,19 @@ class MockAuthor:
 def test_infer_player_nums():
     with pytest.raises(
         ValueError,
-        match='Unable to infer player number from your roles. Please specify your player number.',
+        match="Unable to infer player number from your roles. Please specify your player number.",
     ):
         infer_player_num([])
 
     with pytest.raises(
         ValueError,
-        match='Unable to infer player number from your roles. Please specify your player number.',
+        match="Unable to infer player number from your roles. Please specify your player number.",
     ):
         infer_player_num([MockRole("foo"), MockRole("player01")])
 
     with pytest.raises(
         ValueError,
-        match='You have multiple player roles. Please specify player number.',
+        match="You have multiple player roles. Please specify player number.",
     ):
         infer_player_num([MockRole("Player5"), MockRole("Player15")])
 
@@ -166,8 +166,14 @@ def test_get_hint():
     assert no_player_num.startswith("Unable to infer player number from your roles.")
 
     # Provided player num should take precedence over player num in roles
-    assert get_hint(item_locs, hint_times, set(), author_with_role, 2, "foo") == "p2 result"
-    assert get_hint(item_locs, hint_times, set(), author_with_role, None, "foo") == "p1 result"
+    assert (
+        get_hint(item_locs, hint_times, set(), author_with_role, 2, "foo")
+        == "p2 result"
+    )
+    assert (
+        get_hint(item_locs, hint_times, set(), author_with_role, None, "foo")
+        == "p1 result"
+    )
 
 
 def test_get_hint_response_failures():

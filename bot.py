@@ -90,7 +90,9 @@ async def hint_item(
     """Reveals location(s) of the given item for the given player."""
     g = get_guild_data(ctx.guild.id)
     disabled = g.metadata.disabled_hint_types
-    await ctx.send(get_hint(g.item_locations, g.hint_times, disabled, ctx.author, player, item))
+    await ctx.send(
+        get_hint(g.item_locations, g.hint_times, disabled, ctx.author, player, item)
+    )
 
 
 @bot.command(name="hint-check")
@@ -103,7 +105,9 @@ async def hint_check(
     """Reveals item at the given check for the given player."""
     g = get_guild_data(ctx.guild.id)
     disabled = g.metadata.disabled_hint_types
-    await ctx.send(get_hint(g.checks, g.hint_times, disabled, ctx.author, player, check))
+    await ctx.send(
+        get_hint(g.checks, g.hint_times, disabled, ctx.author, player, check)
+    )
 
 
 @bot.command(name="hint-entrance")
@@ -116,17 +120,26 @@ async def hint_entrance(
     """Reveals entrance to the given location for the given player."""
     g = get_guild_data(ctx.guild.id)
     disabled = g.metadata.disabled_hint_types
-    await ctx.send(get_hint(g.entrances, g.hint_times, disabled, ctx.author, player, location))
+    await ctx.send(
+        get_hint(g.entrances, g.hint_times, disabled, ctx.author, player, location)
+    )
 
 
 @bot.command(name="show-hints")
-async def show_hints(ctx, player: Optional[int] = player_param, hint_type: str = hint_type_param):
+async def show_hints(
+    ctx, player: Optional[int] = player_param, hint_type: str = hint_type_param
+):
     """Shows past hints redeemed for the given player. Infers player from author roles if not specified."""
     hint_types: list[HintType] = get_hint_types(hint_type)
     if not len(hint_types):
         await ctx.send(f"Unrecognized hint type '{hint_type}'.")
     else:
-        response = get_show_hints_response(player, ctx.author.roles, hint_types, get_guild_data(ctx.guild.id).hint_times)
+        response = get_show_hints_response(
+            player,
+            ctx.author.roles,
+            hint_types,
+            get_guild_data(ctx.guild.id).hint_times,
+        )
         await ctx.send(response)
 
 

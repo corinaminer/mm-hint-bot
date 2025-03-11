@@ -1,10 +1,9 @@
 import os
-import time
 
 import pytest
 
 from consts import BOT_VERSION, VERSION_KEY
-from hint_data import DEFAULT_HINT_COOLDOWN_SEC, hint_data_filename
+from hint_data import hint_data_filename
 from item_locations import ItemLocations
 from utils import HintType, load, store
 
