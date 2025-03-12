@@ -3,20 +3,20 @@ import os
 import pytest
 
 from checks import Checks
-from consts import BOT_VERSION, VERSION_KEY
 from guild import Guild
-from hint_data import DEFAULT_HINT_COOLDOWN_SEC, HintTimes, hint_times_filename
 from hint_handler import (
     get_hint,
     get_hint_response,
     get_hint_without_type,
+    get_show_hints_response,
     infer_player_num,
 )
+from hint_times import HintTimes, hint_times_filename
 from item_locations import ItemLocations
-from utils import HintType, load, store
+from utils import HintType, load
 
 test_guild_id = "test-guild-id"
-hint_times_file = hint_times_filename(test_guild_id, HintType.ITEM)
+hint_times_file = hint_times_filename(test_guild_id)
 
 item_key = "kafeis mask"
 item_name = "Kafei's Mask"
@@ -59,19 +59,19 @@ class MockAuthor:
 def test_infer_player_nums():
     with pytest.raises(
         ValueError,
-        match='Unable to infer player number from your roles. Please specify your player number, e.g. "!hint 3 sword".',
+        match="Unable to infer player number from your roles. Please specify your player number.",
     ):
         infer_player_num([])
 
     with pytest.raises(
         ValueError,
-        match='Unable to infer player number from your roles. Please specify your player number, e.g. "!hint 3 sword".',
+        match="Unable to infer player number from your roles. Please specify your player number.",
     ):
         infer_player_num([MockRole("foo"), MockRole("player01")])
 
     with pytest.raises(
         ValueError,
-        match='You have multiple player roles. Please specify player number to hint, e.g. "!hint 5 sword".',
+        match="You have multiple player roles. Please specify player number.",
     ):
         infer_player_num([MockRole("Player5"), MockRole("Player15")])
 
@@ -151,28 +151,36 @@ def test_get_hint():
             }
         },
     )
-    item_locs.hint_times.set_cooldown(0)
+    hint_times = HintTimes(test_guild_id)
+    hint_times.set_cooldown(0, HintType.ITEM)
     author_with_role = MockAuthor(1, "player1")
     author_without_role = MockAuthor(2)
 
     hint_type_disabled = get_hint(
-        item_locs, {HintType.ITEM}, author_with_role, None, "foo"
+        item_locs, hint_times, {HintType.ITEM}, author_with_role, None, "foo"
     )
     assert hint_type_disabled == "Item hints are not currently enabled."
 
     no_player_num = get_hint(
-        item_locs, {HintType.CHECK}, author_without_role, None, "foo"
+        item_locs, hint_times, {HintType.CHECK}, author_without_role, None, "foo"
     )
     assert no_player_num.startswith("Unable to infer player number from your roles.")
 
     # Provided player num should take precedence over player num in roles
-    assert get_hint(item_locs, set(), author_with_role, 2, "foo") == "p2 result"
-    assert get_hint(item_locs, set(), author_with_role, None, "foo") == "p1 result"
+    assert (
+        get_hint(item_locs, hint_times, set(), author_with_role, 2, "foo")
+        == "p2 result"
+    )
+    assert (
+        get_hint(item_locs, hint_times, set(), author_with_role, None, "foo")
+        == "p1 result"
+    )
 
 
 def test_get_hint_response_failures():
     item_locs = ItemLocations(test_guild_id, {})
-    response = get_hint_response(1, "foo", 0, item_locs)
+    hint_times = HintTimes(test_guild_id)
+    response = get_hint_response(1, "foo", 0, item_locs, hint_times)
     assert (
         response
         == "No data is currently stored. (Use !set-log to upload a spoiler log.)"
@@ -182,10 +190,10 @@ def test_get_hint_response_failures():
 
     # HintData.get_results is responsible for validating search query and player number.
     # Test one such request to make sure the result from HintData is handled correctly.
-    response = get_hint_response(1, "foo", 0, item_locs)
+    response = get_hint_response(1, "foo", 0, item_locs, hint_times)
     assert response == "Item foo not recognized. Try !search <keyword> to find it!"
 
-    response = get_hint_response(3, item_key, 0, item_locs)
+    response = get_hint_response(3, item_key, 0, item_locs, hint_times)
     assert (
         response
         == f"For some reason there is no data for player 3's {item_name}........ sorry!!! There must be something wrong with me :( Please report."
@@ -198,50 +206,47 @@ def test_get_hint_response_failures():
 
 def test_get_hint_response():
     item_locs = ItemLocations(test_guild_id, item_locs_dict)
+    hint_times = HintTimes(test_guild_id)
 
     # First hint success
-    response = get_hint_response(1, item_key, 0, item_locs)
+    response = get_hint_response(1, item_key, 0, item_locs, hint_times)
     assert response == player1_locs[0]  # player1 has one location
 
     # Successful hint should trigger creation of hint timestamps file, and result in cooldown response
     hint_times_data = load(hint_times_file)
-    assert hint_times_data[HintTimes.COOLDOWN_KEY] == DEFAULT_HINT_COOLDOWN_SEC
-    assert hint_times_data[HintTimes.ASKERS_KEY].keys() == {"0"}
-    response = get_hint_response(1, item_key, 0, item_locs)
+    assert hint_times_data[HintTimes.HINT_TIMES_KEY].keys() == {"0"}
+    response = get_hint_response(1, item_key, 0, item_locs, hint_times)
     assert response.startswith("Whoa nelly! You can't get another item hint until <t:")
 
     # New author should be successful with the same hint request, once
-    response = get_hint_response(1, item_key, 1, item_locs)
+    response = get_hint_response(1, item_key, 1, item_locs, hint_times)
     assert response == player1_locs[0]
-    response = get_hint_response(1, item_key, 1, item_locs)
+    response = get_hint_response(1, item_key, 1, item_locs, hint_times)
     assert response.startswith("Whoa nelly! You can't get another item hint until <t:")
 
     # Test response with item name and alias
-    response = get_hint_response(1, item_name, 2, item_locs)
+    response = get_hint_response(1, item_name, 2, item_locs, hint_times)
     assert response == player1_locs[0]
-    response = get_hint_response(1, item_alias, 3, item_locs)
+    response = get_hint_response(1, item_alias, 3, item_locs, hint_times)
     assert response == player1_locs[0]
 
     # Test response with multiple locations
-    response = get_hint_response(2, item_key, 4, item_locs)
+    response = get_hint_response(2, item_key, 4, item_locs, hint_times)
     assert response == "\n".join(player2_locs)  # player2 has two locations
 
 
-def test_unknown_version():
-    # If version is unknown, HintTimes should fall back on default values
-    hint_times = {
-        VERSION_KEY: "foo",
-        HintTimes.COOLDOWN_KEY: 101,
-        HintTimes.ASKERS_KEY: {"0": 0},
-    }
-    store(hint_times, hint_times_file)
+def test_get_show_hints_response():
+    hint_times = HintTimes(test_guild_id)
 
-    expected_updated_data = {
-        VERSION_KEY: BOT_VERSION,
-        HintTimes.COOLDOWN_KEY: DEFAULT_HINT_COOLDOWN_SEC,
-        HintTimes.ASKERS_KEY: {},
-    }
-    hint_times = HintTimes(test_guild_id, HintType.ITEM)
-    assert hint_times.cooldown == DEFAULT_HINT_COOLDOWN_SEC and hint_times.askers == {}
-    hint_times.save()
-    assert load(hint_times_file) == expected_updated_data
+    resp = get_show_hints_response(1, [], [HintType.ITEM], hint_times)
+    assert resp == "Player 1 has not even redeemed any item hints yet! :horse: :zzz:"
+
+    hint_times.record_hint(5, 1, HintType.ITEM, "foo")
+    resp = get_show_hints_response(1, [], [HintType.ITEM, HintType.CHECK], hint_times)
+    assert resp == "**Item hints:**\n- foo\n"
+
+    # Does not surface that recorded hint if asked about a different player or hint type
+    resp = get_show_hints_response(2, [], [HintType.ITEM], hint_times)
+    assert resp == "Player 2 has not even redeemed any item hints yet! :horse: :zzz:"
+    resp = get_show_hints_response(1, [], [HintType.CHECK], hint_times)
+    assert resp == "Player 1 has not even redeemed any check hints yet! :horse: :zzz:"
