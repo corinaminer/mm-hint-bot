@@ -3,14 +3,13 @@ import time
 
 import pytest
 
-from consts import BOT_VERSION, VERSION_KEY
-from hint_data import DEFAULT_HINT_COOLDOWN_SEC, hint_data_filename
-from hint_times import HintTimes
+from hint_data import DEFAULT_HINT_COOLDOWN_SEC
+from hint_times import HintTimes, hint_times_filename
 from item_locations import ItemLocations
-from utils import HintType
+from utils import HintType, load
 
 test_guild_id = "test-guild-id"
-hint_data_filename = hint_data_filename(test_guild_id, HintType.ITEM)
+hint_times_fname = hint_times_filename(test_guild_id)
 
 serialized_items = {
     "kafeis mask": {
@@ -21,10 +20,6 @@ serialized_items = {
         ItemLocations.NAME_KEY: "Mask of Scents",
         ItemLocations.RESULTS_KEY: [["location3"], ["location4"]],
     },
-}
-serialized_hint_data = {
-    VERSION_KEY: BOT_VERSION,
-    ItemLocations.DATA_KEY: serialized_items,
 }
 
 
@@ -61,3 +56,17 @@ def test_hint_times_cooldown():
     approx_next_hint_time = hint_time + 5 * 60
     next_hint_timestamp = hint_times.attempt_hint(0, HintType.ITEM)
     assert approx_next_hint_time - 5 < next_hint_timestamp <= approx_next_hint_time
+
+
+def test_clear_past_hints():
+    hint_times = HintTimes(test_guild_id)
+
+    hint_times.record_hint(1, 2, HintType.ITEM, "foo")
+    assert hint_times.past_hints == {2: {HintType.ITEM: ["foo"]}}
+    saved_data = load(hint_times_fname)
+    assert saved_data[HintTimes.PAST_HINTS_KEY] == {"2": {HintType.ITEM.value: ["foo"]}}
+
+    hint_times.clear_past_hints()
+    assert hint_times.past_hints == {}
+    saved_data = load(hint_times_fname)
+    assert saved_data[HintTimes.PAST_HINTS_KEY] == {}

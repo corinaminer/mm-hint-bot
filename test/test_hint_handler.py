@@ -8,6 +8,7 @@ from hint_handler import (
     get_hint,
     get_hint_response,
     get_hint_without_type,
+    get_show_hints_response,
     infer_player_num,
 )
 from hint_times import HintTimes, hint_times_filename
@@ -232,3 +233,20 @@ def test_get_hint_response():
     # Test response with multiple locations
     response = get_hint_response(2, item_key, 4, item_locs, hint_times)
     assert response == "\n".join(player2_locs)  # player2 has two locations
+
+
+def test_get_show_hints_response():
+    hint_times = HintTimes(test_guild_id)
+
+    resp = get_show_hints_response(1, [], [HintType.ITEM], hint_times)
+    assert resp == "Player 1 has not even redeemed any item hints yet! :horse: :zzz:"
+
+    hint_times.record_hint(5, 1, HintType.ITEM, "foo")
+    resp = get_show_hints_response(1, [], [HintType.ITEM, HintType.CHECK], hint_times)
+    assert resp == "**Item hints:**\n- foo\n"
+
+    # Does not surface that recorded hint if asked about a different player or hint type
+    resp = get_show_hints_response(2, [], [HintType.ITEM], hint_times)
+    assert resp == "Player 2 has not even redeemed any item hints yet! :horse: :zzz:"
+    resp = get_show_hints_response(1, [], [HintType.CHECK], hint_times)
+    assert resp == "Player 1 has not even redeemed any check hints yet! :horse: :zzz:"
