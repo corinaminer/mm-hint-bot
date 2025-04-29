@@ -61,24 +61,29 @@ def test_infer_player_nums():
         ValueError,
         match="Unable to infer player number from your roles. Please specify your player number.",
     ):
-        infer_player_num([])
+        infer_player_num(None, [])
 
     with pytest.raises(
         ValueError,
         match="Unable to infer player number from your roles. Please specify your player number.",
     ):
-        infer_player_num([MockRole("foo"), MockRole("player01")])
+        infer_player_num(None, [MockRole("foo"), MockRole("player01")])
 
     with pytest.raises(
         ValueError,
         match="You have multiple player roles. Please specify player number.",
     ):
-        infer_player_num([MockRole("Player5"), MockRole("Player15")])
+        infer_player_num(None, [MockRole("Player5"), MockRole("Player15")])
 
-    assert infer_player_num([MockRole("player5")]) == 5
-    assert infer_player_num([MockRole("Player15")]) == 15
-    assert infer_player_num([MockRole("@Player10")]) == 10
-    assert infer_player_num([MockRole("player 10")]) == 10
+    assert infer_player_num(None, [MockRole("player5")]) == 5
+    assert infer_player_num(None, [MockRole("Player15")]) == 15
+    assert infer_player_num(None, [MockRole("@Player10")]) == 10
+    assert infer_player_num(None, [MockRole("player 10")]) == 10
+
+    with pytest.raises(ValueError, match="Invalid player number 0."):
+        infer_player_num(0, [MockRole("player5")])
+
+    assert infer_player_num(1, [MockRole("player5")]) == 1
 
 
 def test_get_hint_without_type():
@@ -114,31 +119,32 @@ def test_get_hint_without_type():
     # Should fail if query matches item keys in two hint types
     duplicate_keys = get_hint_without_type(g, "foo", author, 1)
     assert (
-        duplicate_keys
+        duplicate_keys.error
         == "Both item and check hints can match foo. Please use !hint-item or !hint-check."
     )
 
     match_key_and_alias = get_hint_without_type(g, "bar baz", author, 1)
     assert (
-        match_key_and_alias
+        match_key_and_alias.error
         == "Both item and check hints can match bar baz. Please use !hint-item or !hint-check."
     )
 
     # Should fail if no item key matches query
     no_match = get_hint_without_type(g, "no match", author, 1)
     assert (
-        no_match == "Query no match not recognized. Try !search <keyword> to find it!"
+        no_match.error
+        == "Query no match not recognized. Try !search <keyword> to find it!"
     )
 
     # Should identify correct hint type, even if that type is disabled
     g.metadata.disable_hint_types([HintType.ITEM])
     hint_disabled = get_hint_without_type(g, "bars baz", author, 1)
-    assert hint_disabled == "Item hints are not currently enabled."
+    assert hint_disabled.error == "Item hints are not currently enabled."
 
     # Test successful call
     g.metadata.enable_hint_types([HintType.ITEM])
     success = get_hint_without_type(g, "bars baz", author, 1)
-    assert success == "p1 result"
+    assert success.results == ["p1 result"]
 
 
 def test_get_hint():
@@ -159,28 +165,28 @@ def test_get_hint():
     hint_type_disabled = get_hint(
         item_locs, hint_times, {HintType.ITEM}, author_with_role, None, "foo"
     )
-    assert hint_type_disabled == "Item hints are not currently enabled."
+    assert hint_type_disabled.error == "Item hints are not currently enabled."
 
     no_player_num = get_hint(
         item_locs, hint_times, {HintType.CHECK}, author_without_role, None, "foo"
     )
-    assert no_player_num.startswith("Unable to infer player number from your roles.")
+    assert no_player_num.error.startswith(
+        "Unable to infer player number from your roles."
+    )
 
     # Provided player num should take precedence over player num in roles
-    assert (
-        get_hint(item_locs, hint_times, set(), author_with_role, 2, "foo")
-        == "p2 result"
-    )
-    assert (
-        get_hint(item_locs, hint_times, set(), author_with_role, None, "foo")
-        == "p1 result"
-    )
+    assert get_hint(
+        item_locs, hint_times, set(), author_with_role, 2, "foo"
+    ).results == ["p2 result"]
+    assert get_hint(
+        item_locs, hint_times, set(), author_with_role, None, "foo"
+    ).results == ["p1 result"]
 
 
 def test_get_hint_response_failures():
     item_locs = ItemLocations(test_guild_id, {})
     hint_times = HintTimes(test_guild_id)
-    response = get_hint_response(1, "foo", 0, item_locs, hint_times)
+    response = get_hint_response(1, "foo", 0, item_locs, hint_times).error
     assert (
         response
         == "No data is currently stored. (Use !set-log to upload a spoiler log.)"
@@ -190,10 +196,10 @@ def test_get_hint_response_failures():
 
     # HintData.get_results is responsible for validating search query and player number.
     # Test one such request to make sure the result from HintData is handled correctly.
-    response = get_hint_response(1, "foo", 0, item_locs, hint_times)
+    response = get_hint_response(1, "foo", 0, item_locs, hint_times).error
     assert response == "Item foo not recognized. Try !search <keyword> to find it!"
 
-    response = get_hint_response(3, item_key, 0, item_locs, hint_times)
+    response = get_hint_response(3, item_key, 0, item_locs, hint_times).error
     assert (
         response
         == f"For some reason there is no data for player 3's {item_name}........ sorry!!! There must be something wrong with me :( Please report."
@@ -210,43 +216,50 @@ def test_get_hint_response():
 
     # First hint success
     response = get_hint_response(1, item_key, 0, item_locs, hint_times)
-    assert response == player1_locs[0]  # player1 has one location
+    assert response.results == player1_locs
 
     # Successful hint should trigger creation of hint timestamps file, and result in cooldown response
     hint_times_data = load(hint_times_file)
     assert hint_times_data[HintTimes.HINT_TIMES_KEY].keys() == {"0"}
     response = get_hint_response(1, item_key, 0, item_locs, hint_times)
-    assert response.startswith("Whoa nelly! You can't get another item hint until <t:")
+    assert response.error.startswith(
+        "Whoa nelly! You can't get another item hint until <t:"
+    )
 
     # New author should be successful with the same hint request, once
     response = get_hint_response(1, item_key, 1, item_locs, hint_times)
-    assert response == player1_locs[0]
+    assert response.results == player1_locs
     response = get_hint_response(1, item_key, 1, item_locs, hint_times)
-    assert response.startswith("Whoa nelly! You can't get another item hint until <t:")
+    assert response.error.startswith(
+        "Whoa nelly! You can't get another item hint until <t:"
+    )
 
     # Test response with item name and alias
     response = get_hint_response(1, item_name, 2, item_locs, hint_times)
-    assert response == player1_locs[0]
+    assert response.results == player1_locs
     response = get_hint_response(1, item_alias, 3, item_locs, hint_times)
-    assert response == player1_locs[0]
+    assert response.results == player1_locs
 
     # Test response with multiple locations
     response = get_hint_response(2, item_key, 4, item_locs, hint_times)
-    assert response == "\n".join(player2_locs)  # player2 has two locations
+    assert response.results == player2_locs  # player2 has two locations
 
 
 def test_get_show_hints_response():
     hint_times = HintTimes(test_guild_id)
 
-    resp = get_show_hints_response(1, [], [HintType.ITEM], hint_times)
+    resp = get_show_hints_response(1, [HintType.ITEM], hint_times)
     assert resp == "Player 1 has not even redeemed any item hints yet! :horse: :zzz:"
 
-    hint_times.record_hint(5, 1, HintType.ITEM, "foo")
-    resp = get_show_hints_response(1, [], [HintType.ITEM, HintType.CHECK], hint_times)
+    is_new_hint = hint_times.record_hint(5, 1, HintType.ITEM, "foo")
+    assert is_new_hint is True
+    resp = get_show_hints_response(1, [HintType.ITEM, HintType.CHECK], hint_times)
     assert resp == "**Item hints:**\n- foo\n"
+    is_new_hint = hint_times.record_hint(5, 1, HintType.ITEM, "foo")
+    assert is_new_hint is False
 
     # Does not surface that recorded hint if asked about a different player or hint type
-    resp = get_show_hints_response(2, [], [HintType.ITEM], hint_times)
+    resp = get_show_hints_response(2, [HintType.ITEM], hint_times)
     assert resp == "Player 2 has not even redeemed any item hints yet! :horse: :zzz:"
-    resp = get_show_hints_response(1, [], [HintType.CHECK], hint_times)
+    resp = get_show_hints_response(1, [HintType.CHECK], hint_times)
     assert resp == "Player 1 has not even redeemed any check hints yet! :horse: :zzz:"

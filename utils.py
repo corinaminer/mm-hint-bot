@@ -11,6 +11,34 @@ class HintType(Enum):
         return self.value
 
 
+class HintResult:
+    def __init__(self, success: bool):
+        self.success = success
+
+
+class SuccessfulHintResult(HintResult):
+    def __init__(
+        self,
+        item_name: str,
+        results: list[str],
+        hint_type: HintType,
+        player_num: int,
+        is_new_hint,
+    ):
+        super().__init__(True)
+        self.item_name = item_name
+        self.results = results
+        self.hint_type = hint_type
+        self.player_num = player_num
+        self.is_new_hint = is_new_hint
+
+
+class FailedHintResult(HintResult):
+    def __init__(self, error: str):
+        super().__init__(False)
+        self.error = error
+
+
 def get_hint_types(query) -> list[HintType]:
     if query == "all":
         return [h for h in HintType]
@@ -18,6 +46,16 @@ def get_hint_types(query) -> list[HintType]:
         return [HintType(query)]
     except ValueError:
         return []
+
+
+def compose_show_hints_message(hint_types: list[HintType], player_past_hints):
+    message = ""
+    for ht in hint_types:
+        if ht in player_past_hints:
+            message += f"**{ht.value.capitalize()} hints:**\n"
+            for hint_result in player_past_hints[ht]:
+                message += f"- {hint_result}\n"
+    return message
 
 
 def canonicalize(s: str) -> str:

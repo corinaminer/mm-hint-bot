@@ -8,6 +8,7 @@ from entrances import Entrances
 from hint_data import HintData
 from hint_times import HintTimes
 from item_locations import ItemLocations
+from message_tracker import MessageTracker
 from utils import HintType, load, store
 
 log = logging.getLogger(__name__)
@@ -29,6 +30,7 @@ class Guild:
         self.checks = checks or Checks(guild_id)
         self.entrances = entrances or Entrances(guild_id)
         self.hint_times = HintTimes(guild_id)
+        self.message_tracker = MessageTracker(guild_id)
 
     def get_hint_data(self, hint_type: HintType) -> HintData:
         match hint_type:

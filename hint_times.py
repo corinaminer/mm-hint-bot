@@ -116,6 +116,7 @@ class HintTimes:
     def record_hint(
         self, asker_id: int, player_num: int, hint_type: HintType, hint_result: str
     ):
+        """Records a successful hint and asker hint time. Returns True if it's a new hint."""
         # Record current time as the asker's latest hint time
         self.hint_times.setdefault(asker_id, {})[hint_type] = int(time.time())
         # Add hint to past hints if it's not a repeat
@@ -124,7 +125,9 @@ class HintTimes:
         )
         if hint_result not in past_hints:
             past_hints.append(hint_result)
-        self.save()
+            self.save()
+            return True
+        return False
 
     def get_cooldown(self, hint_type: HintType):
         return self.cooldowns.get(hint_type, DEFAULT_HINT_COOLDOWN_SEC)

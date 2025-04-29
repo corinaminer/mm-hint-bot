@@ -7,10 +7,15 @@ from discord.ext import commands
 from dotenv import load_dotenv
 
 from guild import Guild
-from hint_handler import get_hint, get_hint_without_type, get_show_hints_response
+from hint_handler import (
+    get_hint,
+    get_hint_without_type,
+    get_show_hints_response,
+    infer_player_num,
+)
 from search_handler import get_search_response
 from spoiler_log_handler import handle_spoiler_log
-from utils import HintType, get_hint_types
+from utils import HintResult, HintType, get_hint_types
 
 ADMIN_ROLE_NAME = "admin"
 
@@ -65,7 +70,22 @@ async def set_spoiler_log(ctx):
         g = Guild(guild_id, item_locs, checks, entrances)
         guilds[guild_id] = g
         g.hint_times.clear_past_hints()
+        g.message_tracker.clear_tracked_messages()
         await ctx.send(result_msg)
+
+
+async def report_hint_result(hint_result: HintResult, ctx, guild):
+    if hint_result.success:
+        await ctx.send("\n".join(hint_result.results))
+        if hint_result.is_new_hint:
+            player_past_hints = guild.hint_times.past_hints.get(
+                hint_result.player_num, {}
+            )
+            await guild.message_tracker.edit_messages(
+                bot, hint_result.player_num, hint_result.hint_type, player_past_hints
+            )
+    else:
+        await ctx.send(hint_result.error)
 
 
 @bot.command(name="hint")
@@ -77,7 +97,8 @@ async def hint(
 ):
     """Reveals location(s) of a given item, result of a given check, or entrance to a given location."""
     g = get_guild_data(ctx.guild.id)
-    await ctx.send(get_hint_without_type(g, query, ctx.author, player))
+    hint_result = get_hint_without_type(g, query, ctx.author, player)
+    await report_hint_result(hint_result, ctx, g)
 
 
 @bot.command(name="hint-item")
@@ -90,9 +111,10 @@ async def hint_item(
     """Reveals location(s) of the given item for the given player."""
     g = get_guild_data(ctx.guild.id)
     disabled = g.metadata.disabled_hint_types
-    await ctx.send(
-        get_hint(g.item_locations, g.hint_times, disabled, ctx.author, player, item)
+    result = get_hint(
+        g.item_locations, g.hint_times, disabled, ctx.author, player, item
     )
+    await report_hint_result(result, ctx, g)
 
 
 @bot.command(name="hint-check")
@@ -105,9 +127,8 @@ async def hint_check(
     """Reveals item at the given check for the given player."""
     g = get_guild_data(ctx.guild.id)
     disabled = g.metadata.disabled_hint_types
-    await ctx.send(
-        get_hint(g.checks, g.hint_times, disabled, ctx.author, player, check)
-    )
+    result = get_hint(g.checks, g.hint_times, disabled, ctx.author, player, check)
+    await report_hint_result(result, ctx, g)
 
 
 @bot.command(name="hint-entrance")
@@ -120,9 +141,8 @@ async def hint_entrance(
     """Reveals entrance to the given location for the given player."""
     g = get_guild_data(ctx.guild.id)
     disabled = g.metadata.disabled_hint_types
-    await ctx.send(
-        get_hint(g.entrances, g.hint_times, disabled, ctx.author, player, location)
-    )
+    result = get_hint(g.entrances, g.hint_times, disabled, ctx.author, player, location)
+    await report_hint_result(result, ctx, g)
 
 
 @bot.command(name="show-hints")
@@ -134,13 +154,16 @@ async def show_hints(
     if not len(hint_types):
         await ctx.send(f"Unrecognized hint type '{hint_type}'.")
     else:
-        response = get_show_hints_response(
-            player,
-            ctx.author.roles,
-            hint_types,
-            get_guild_data(ctx.guild.id).hint_times,
-        )
-        await ctx.send(response)
+        g = get_guild_data(ctx.guild.id)
+        try:
+            player_num = infer_player_num(player, ctx.author.roles)
+            response = get_show_hints_response(player_num, hint_types, g.hint_times)
+            message = await ctx.send(response)
+            g.message_tracker.track_message(
+                player_num, hint_type, ctx.channel.id, message.id
+            )
+        except ValueError as err:
+            await ctx.send(err.args[0])
 
 
 @bot.command(name="search")
