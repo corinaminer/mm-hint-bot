@@ -1,6 +1,8 @@
 import json
 from enum import Enum
 
+from consts import DISCORD_MAX_MSG_LENGTH
+
 
 class HintType(Enum):
     ITEM = "item"
@@ -55,6 +57,10 @@ def compose_show_hints_message(hint_types: list[HintType], player_past_hints):
             message += f"**{ht.value.capitalize()} hints:**\n"
             for hint_result in player_past_hints[ht]:
                 message += f"- {hint_result}\n"
+        if len(message) > DISCORD_MAX_MSG_LENGTH:
+            end_note = "\n...and more"
+            message = message[: DISCORD_MAX_MSG_LENGTH - len(end_note)] + end_note
+            break
     return message
 
 

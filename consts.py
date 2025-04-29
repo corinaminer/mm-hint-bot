@@ -1,6 +1,8 @@
 BOT_VERSION = 1
 VERSION_KEY = "version"
 
+DISCORD_MAX_MSG_LENGTH = 2000
+
 IGNORED_ITEMS = {
     "Nothing",
     "Recovery Heart",

@@ -6,6 +6,7 @@ import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 
+from consts import DISCORD_MAX_MSG_LENGTH
 from guild import Guild
 from hint_handler import (
     get_hint,
@@ -179,8 +180,7 @@ async def search(ctx, *, query=commands.parameter(description="Search query")):
         g.checks,
         g.entrances,
     )
-    if len(response) >= 2000:
-        # (actually discord limits the bot's messages to <2000 characters)
+    if len(response) > DISCORD_MAX_MSG_LENGTH:
         await ctx.send(
             "Search results are too extensive for my little bot brain. Please be more specific."
         )
