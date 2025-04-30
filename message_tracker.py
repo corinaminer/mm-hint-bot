@@ -1,5 +1,7 @@
 import logging
 
+from discord.errors import NotFound
+
 from consts import BOT_VERSION, VERSION_KEY
 from utils import HintType, compose_show_hints_message, get_hint_types, load, store
 
@@ -99,21 +101,60 @@ class MessageTracker:
         player_messages = self.messages.get(player_num, {})
         all_hint_type_msgs = player_messages.get("all", {})
         single_hint_type_msgs = player_messages.get(str(hint_type_just_hinted), {})
+
+        records_changed = False
+        channels = {
+            channel_id: bot.get_channel(channel_id)
+            for channel_id in all_hint_type_msgs.keys() | single_hint_type_msgs.keys()
+        }
         if len(all_hint_type_msgs):
             updated_content = compose_show_hints_message(
                 get_hint_types("all"), player_hint_data
             )
-            for channel_id in all_hint_type_msgs:
-                channel = bot.get_channel(channel_id)
-                for message_id in all_hint_type_msgs[channel_id]:
-                    message = await channel.fetch_message(message_id)
-                    await message.edit(content=updated_content)
+            records_changed = (
+                await update_messages(channels, all_hint_type_msgs, updated_content)
+                or records_changed
+            )
         if len(single_hint_type_msgs):
             updated_content = compose_show_hints_message(
                 [hint_type_just_hinted], player_hint_data
             )
-            for channel_id in single_hint_type_msgs:
-                channel = bot.get_channel(channel_id)
-                for message_id in single_hint_type_msgs[channel_id]:
-                    message = await channel.fetch_message(message_id)
-                    await message.edit(content=updated_content)
+            records_changed = (
+                await update_messages(channels, single_hint_type_msgs, updated_content)
+                or records_changed
+            )
+
+        if records_changed:
+            self.save()
+
+
+async def update_messages(channels, message_records, updated_content):
+    records_changed = False
+    for channel_id, channel in channels.items():
+        message_ids = message_records.get(channel_id)
+        if message_ids is None:
+            # none of these messages are in that channel
+            continue
+        if channel is None:
+            # channel was deleted
+            records_changed = True
+            del message_records[channel_id]
+            continue
+
+        updated_message_ids = []
+        for message_id in message_ids:
+            try:
+                message = await channel.fetch_message(message_id)
+            except NotFound:
+                continue  # message deleted
+            await message.edit(content=updated_content)
+            updated_message_ids.append(message_id)
+        if len(updated_message_ids) < len(message_ids):
+            records_changed = True
+            if not len(updated_message_ids):
+                # all recorded messages in this channel have been deleted
+                del message_records[channel_id]
+            else:
+                # some recorded messages in this channel have been deleted
+                message_records[channel_id] = updated_message_ids
+    return records_changed
