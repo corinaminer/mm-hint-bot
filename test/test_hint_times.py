@@ -38,7 +38,7 @@ def test_hint_times_cooldown():
 
     # run 2 hints, second should be denied
     assert hint_times.attempt_hint(0, HintType.ITEM) == 0  # first hint is allowed
-    hint_times.record_hint(0, 0, HintType.ITEM, "foo")
+    hint_times.record_hint(0, 0, HintType.ITEM, "foo", ["bar"])
     hint_time = time.time()
     approx_next_hint_time = hint_time + DEFAULT_HINT_COOLDOWN_SEC
     next_hint_timestamp = hint_times.attempt_hint(0, HintType.ITEM)
@@ -61,10 +61,12 @@ def test_hint_times_cooldown():
 def test_clear_past_hints():
     hint_times = HintTimes(test_guild_id)
 
-    hint_times.record_hint(1, 2, HintType.ITEM, "foo")
-    assert hint_times.past_hints == {2: {HintType.ITEM: ["foo"]}}
+    hint_times.record_hint(1, 2, HintType.ITEM, "foo", ["bar"])
+    assert hint_times.past_hints == {2: {HintType.ITEM: {"foo": ["bar"]}}}
     saved_data = load(hint_times_fname)
-    assert saved_data[HintTimes.PAST_HINTS_KEY] == {"2": {HintType.ITEM.value: ["foo"]}}
+    assert saved_data[HintTimes.PAST_HINTS_KEY] == {
+        "2": {HintType.ITEM.value: {"foo": ["bar"]}}
+    }
 
     hint_times.clear_past_hints()
     assert hint_times.past_hints == {}

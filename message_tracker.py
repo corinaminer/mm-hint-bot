@@ -95,7 +95,7 @@ class MessageTracker:
         bot,
         player_num: int,
         hint_type_just_hinted: HintType,
-        player_hint_data: dict,
+        player_hint_data: dict[HintType, dict[str, list[str]]],
     ):
         """Updates old !show-hint responses with a hint that was just redeemed."""
         player_messages = self.messages.get(player_num, {})

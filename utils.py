@@ -50,13 +50,15 @@ def get_hint_types(query) -> list[HintType]:
         return []
 
 
-def compose_show_hints_message(hint_types: list[HintType], player_past_hints):
+def compose_show_hints_message(
+    hint_types: list[HintType], player_past_hints: dict[HintType, dict[str, list[str]]]
+):
     message = ""
     for ht in hint_types:
         if ht in player_past_hints:
             message += f"**{ht.value.capitalize()} hints:**\n"
-            for hint_result in player_past_hints[ht]:
-                message += f"- {hint_result}\n"
+            for hint_query, hint_results in player_past_hints[ht].items():
+                message += f"- {hint_query}: {", ".join(hint_results)}\n"
         if len(message) > DISCORD_MAX_MSG_LENGTH:
             end_note = "\n...and more"
             message = message[: DISCORD_MAX_MSG_LENGTH - len(end_note)] + end_note

@@ -30,10 +30,10 @@ class HintTimes:
         },
         PAST_HINTS_KEY: {
             player number: {
-                hint type 1: [
-                    "past hint query: answer",
+                hint type 1: {
+                    past hint query: [result 1, result 2, ...],
                     ...
-                ],
+                },
                 ...
             },
             ...
@@ -70,7 +70,7 @@ class HintTimes:
                 }
             for player, past_hints in data[HintTimes.PAST_HINTS_KEY].items():
                 self.past_hints[int(player)] = {
-                    HintType(ht): hint_list for ht, hint_list in past_hints.items()
+                    HintType(ht): hint_dict for ht, hint_dict in past_hints.items()
                 }
         else:
             # Data in file is outdated or corrupt. If it's a known old version, use it; otherwise ignore it.
@@ -88,7 +88,7 @@ class HintTimes:
             }
         for player, past_hints in self.past_hints.items():
             serialized_past_hints[player] = {
-                str(ht): hint_list for ht, hint_list in past_hints.items()
+                str(ht): hint_dict for ht, hint_dict in past_hints.items()
             }
         filedata = {
             VERSION_KEY: BOT_VERSION,
@@ -114,17 +114,22 @@ class HintTimes:
         return int(next_hint_time)
 
     def record_hint(
-        self, asker_id: int, player_num: int, hint_type: HintType, hint_result: str
+        self,
+        asker_id: int,
+        player_num: int,
+        hint_type: HintType,
+        query: str,
+        results: list[str],
     ):
         """Records a successful hint and asker hint time. Returns True if it's a new hint."""
         # Record current time as the asker's latest hint time
         self.hint_times.setdefault(asker_id, {})[hint_type] = int(time.time())
         # Add hint to past hints if it's not a repeat
         past_hints = self.past_hints.setdefault(player_num, {}).setdefault(
-            hint_type, []
+            hint_type, {}
         )
-        if hint_result not in past_hints:
-            past_hints.append(hint_result)
+        if query not in past_hints:
+            past_hints[query] = results
             self.save()
             return True
         return False

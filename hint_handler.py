@@ -137,7 +137,8 @@ def get_hint_response(
         author_id,
         player_number,
         hint_data.hint_type,
-        f"{item_name}: {', '.join(player_locs_for_item)}",
+        item_name,
+        player_locs_for_item,
     )
     return SuccessfulHintResult(
         item_name, player_locs_for_item, hint_data.hint_type, player_number, is_new_hint

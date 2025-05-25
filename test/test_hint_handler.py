@@ -251,11 +251,11 @@ def test_get_show_hints_response():
     resp = get_show_hints_response(1, [HintType.ITEM], hint_times)
     assert resp == "Player 1 has not even redeemed any item hints yet! :horse: :zzz:"
 
-    is_new_hint = hint_times.record_hint(5, 1, HintType.ITEM, "foo")
+    is_new_hint = hint_times.record_hint(5, 1, HintType.ITEM, "foo", ["bar"])
     assert is_new_hint is True
     resp = get_show_hints_response(1, [HintType.ITEM, HintType.CHECK], hint_times)
-    assert resp == "**Item hints:**\n- foo\n"
-    is_new_hint = hint_times.record_hint(5, 1, HintType.ITEM, "foo")
+    assert resp == "**Item hints:**\n- foo: bar\n"
+    is_new_hint = hint_times.record_hint(5, 1, HintType.ITEM, "foo", ["bar"])
     assert is_new_hint is False
 
     # Does not surface that recorded hint if asked about a different player or hint type
