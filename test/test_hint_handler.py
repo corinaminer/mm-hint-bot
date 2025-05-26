@@ -1,4 +1,4 @@
-import os
+from test.conftest import TEST_GUILD_ID
 
 import pytest
 
@@ -15,8 +15,7 @@ from hint_times import HintTimes, hint_times_filename
 from item_locations import ItemLocations
 from utils import HintType, load
 
-test_guild_id = "test-guild-id"
-hint_times_file = hint_times_filename(test_guild_id)
+hint_times_file = hint_times_filename(TEST_GUILD_ID)
 
 item_key = "kafeis mask"
 item_name = "Kafei's Mask"
@@ -34,15 +33,6 @@ item_locs_dict = {
         ],
     }
 }
-
-
-@pytest.fixture(autouse=True)
-def cleanup():
-    yield
-
-    for file in os.listdir():
-        if file.startswith(test_guild_id) and file.endswith(".json"):
-            os.remove(file)
 
 
 class MockRole:
@@ -88,7 +78,7 @@ def test_infer_player_nums():
 
 def test_get_hint_without_type():
     item_locs = ItemLocations(
-        test_guild_id,
+        TEST_GUILD_ID,
         {
             "foo": {
                 ItemLocations.NAME_KEY: "Foo",
@@ -101,7 +91,7 @@ def test_get_hint_without_type():
         },
     )
     checks = Checks(
-        test_guild_id,
+        TEST_GUILD_ID,
         {
             "foo": {
                 Checks.NAME_KEY: "Foo",
@@ -113,7 +103,7 @@ def test_get_hint_without_type():
             },
         },
     )
-    g = Guild(test_guild_id, item_locs, checks, None)
+    g = Guild(TEST_GUILD_ID, item_locs, checks, None)
     author = MockAuthor(1)
 
     # Should fail if query matches item keys in two hint types
@@ -149,7 +139,7 @@ def test_get_hint_without_type():
 
 def test_get_hint():
     item_locs = ItemLocations(
-        test_guild_id,
+        TEST_GUILD_ID,
         {
             "foo": {
                 ItemLocations.NAME_KEY: "Foo",
@@ -157,7 +147,7 @@ def test_get_hint():
             }
         },
     )
-    hint_times = HintTimes(test_guild_id)
+    hint_times = HintTimes(TEST_GUILD_ID)
     hint_times.set_cooldown(0, HintType.ITEM)
     author_with_role = MockAuthor(1, "player1")
     author_without_role = MockAuthor(2)
@@ -184,15 +174,15 @@ def test_get_hint():
 
 
 def test_get_hint_response_failures():
-    item_locs = ItemLocations(test_guild_id, {})
-    hint_times = HintTimes(test_guild_id)
+    item_locs = ItemLocations(TEST_GUILD_ID, {})
+    hint_times = HintTimes(TEST_GUILD_ID)
     response = get_hint_response(1, "foo", 0, item_locs, hint_times).error
     assert (
         response
         == "No data is currently stored. (Use !set-log to upload a spoiler log.)"
     )
 
-    item_locs = ItemLocations(test_guild_id, item_locs_dict)
+    item_locs = ItemLocations(TEST_GUILD_ID, item_locs_dict)
 
     # HintData.get_results is responsible for validating search query and player number.
     # Test one such request to make sure the result from HintData is handled correctly.
@@ -211,8 +201,8 @@ def test_get_hint_response_failures():
 
 
 def test_get_hint_response():
-    item_locs = ItemLocations(test_guild_id, item_locs_dict)
-    hint_times = HintTimes(test_guild_id)
+    item_locs = ItemLocations(TEST_GUILD_ID, item_locs_dict)
+    hint_times = HintTimes(TEST_GUILD_ID)
 
     # First hint success
     response = get_hint_response(1, item_key, 0, item_locs, hint_times)
@@ -246,7 +236,7 @@ def test_get_hint_response():
 
 
 def test_get_show_hints_response():
-    hint_times = HintTimes(test_guild_id)
+    hint_times = HintTimes(TEST_GUILD_ID)
 
     resp = get_show_hints_response(1, [HintType.ITEM], hint_times)
     assert resp == "Player 1 has not even redeemed any item hints yet! :horse: :zzz:"

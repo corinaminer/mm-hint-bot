@@ -1,4 +1,4 @@
-import os
+from test.conftest import TEST_GUILD_ID
 
 import pytest
 
@@ -7,8 +7,7 @@ from hint_data import hint_data_filename
 from item_locations import ItemLocations
 from utils import HintType, load, store
 
-test_guild_id = "test-guild-id"
-hint_data_filename = hint_data_filename(test_guild_id, HintType.ITEM)
+hint_data_filename = hint_data_filename(TEST_GUILD_ID, HintType.ITEM)
 
 serialized_items = {
     "kafeis mask": {
@@ -26,21 +25,12 @@ serialized_hint_data = {
 }
 
 
-@pytest.fixture(autouse=True)
-def cleanup():
-    yield
-
-    for file in os.listdir():
-        if file.startswith(test_guild_id) and file.endswith(".json"):
-            os.remove(file)
-
-
 def test_find_matches():
-    item_locs = ItemLocations(test_guild_id)
+    item_locs = ItemLocations(TEST_GUILD_ID)
     with pytest.raises(FileNotFoundError):
         item_locs.find_matches("foo")
 
-    item_locs = ItemLocations(test_guild_id, serialized_items)
+    item_locs = ItemLocations(TEST_GUILD_ID, serialized_items)
     # assert item_locs.find_matches("foo") == []
     # assert item_locs.find_matches("kafeis") == ["Kafei's Mask"]
     # assert item_locs.find_matches("Kafei's") == ["Kafei's Mask"]
@@ -49,18 +39,18 @@ def test_find_matches():
 
 
 def test_get_item_key():
-    item_locs = ItemLocations(test_guild_id, serialized_items)
+    item_locs = ItemLocations(TEST_GUILD_ID, serialized_items)
     assert item_locs.get_item_key("foo") is None
     assert item_locs.get_item_key("kafeis mask") == "kafeis mask"  # exact match
     assert item_locs.get_item_key("sniffa") == "mask of scents"  # alias
 
 
 def test_get_results():
-    item_locs = ItemLocations(test_guild_id)
+    item_locs = ItemLocations(TEST_GUILD_ID)
     with pytest.raises(FileNotFoundError):
         item_locs.get_results(1, "foo")
 
-    item_locs = ItemLocations(test_guild_id, serialized_items)
+    item_locs = ItemLocations(TEST_GUILD_ID, serialized_items)
 
     # Unrecognized query
     with pytest.raises(
@@ -95,7 +85,7 @@ def test_unknown_version():
     }
     store(invalid_version_data, hint_data_filename)
 
-    item_locations = ItemLocations(test_guild_id)
+    item_locations = ItemLocations(TEST_GUILD_ID)
     assert item_locations.items == {} and item_locations.aliases == {}
     item_locations.save()
     assert load(hint_data_filename) == {

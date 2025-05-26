@@ -1,30 +1,18 @@
-import os
-
-import pytest
+from test.conftest import TEST_GUILD_ID
 
 from hint_data import hint_data_filename
 from spoiler_log_handler import handle_spoiler_log
 from utils import HintType
 
-test_guild_id = "test-guild-id"
-hint_data_filename = hint_data_filename(test_guild_id, HintType.ITEM)
+hint_data_filename = hint_data_filename(TEST_GUILD_ID, HintType.ITEM)
 owl_spoiler_file = "owl_spoiler.txt"
-
-
-@pytest.fixture(autouse=True)
-def cleanup():
-    yield
-
-    for file in os.listdir():
-        if file.startswith(test_guild_id) and file.endswith(".json"):
-            os.remove(file)
 
 
 def test_generate_item_aliases():
     with open(owl_spoiler_file, "r") as f:
         spoiler_lines = f.read().split("\n")
     resp, item_locs, checks, entrances = handle_spoiler_log(
-        spoiler_lines, test_guild_id
+        spoiler_lines, TEST_GUILD_ID
     )
     item_aliases = item_locs.aliases
     check_aliases = checks.aliases

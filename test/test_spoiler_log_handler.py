@@ -1,32 +1,20 @@
-import os
-
-import pytest
+from test.conftest import TEST_GUILD_ID
 
 from hint_data import HintData
 from spoiler_log_handler import handle_spoiler_log
 
-test_guild_id = "test-guild-id"
 sample_spoiler_file = "sample_spoiler.txt"
 
 
-@pytest.fixture(autouse=True)
-def cleanup():
-    yield
-
-    for file in os.listdir():
-        if file.startswith(test_guild_id) and file.endswith(".json"):
-            os.remove(file)
-
-
 def test_empty_spoiler():
-    resp, item_locs, checks, entrances = handle_spoiler_log([], test_guild_id)
+    resp, item_locs, checks, entrances = handle_spoiler_log([], TEST_GUILD_ID)
     assert resp == "Failed to find player count. Could not extract data."
     assert item_locs.items == {} and checks.items == {} and entrances.items == {}
 
 
 def test_no_entrances_or_locations():
     resp, item_locs, checks, entrances = handle_spoiler_log(
-        ["  players: 2"], test_guild_id
+        ["  players: 2"], TEST_GUILD_ID
     )
     assert resp == "Location list is missing or empty. Could not extract data."
     assert item_locs.items == {} and checks.items == {} and entrances.items == {}
@@ -45,7 +33,7 @@ Location List (2)
       MM Tingle Map Clock Town: Player 2 Light Arrows (MM)
     """
     resp, item_locs, checks, entrances = handle_spoiler_log(
-        spoiler.split("\n"), test_guild_id
+        spoiler.split("\n"), TEST_GUILD_ID
     )
     assert resp == "Spoiler log processed successfully!"
     assert entrances.items == {}
@@ -80,7 +68,7 @@ Entrances
     MM Clock Tower Platform to MM Clock Tower Roof (MM_CLOCK_TOWER_ROOF) -> MM Woodfall Temple from MM Woodfall Front of Temple (MM_TEMPLE_WOODFALL)
     """
     resp, item_locs, checks, entrances = handle_spoiler_log(
-        spoiler.split("\n"), test_guild_id
+        spoiler.split("\n"), TEST_GUILD_ID
     )
     assert resp == "Location list is missing or empty. Could not extract data."
     assert item_locs.items == {} and checks.items == {}
@@ -99,7 +87,7 @@ def test_complete_spoiler():
     with open(sample_spoiler_file, "r") as f:
         spoiler_lines = f.read().split("\n")
     resp, item_locs, checks, entrances = handle_spoiler_log(
-        spoiler_lines, test_guild_id
+        spoiler_lines, TEST_GUILD_ID
     )
     assert resp == "Spoiler log processed successfully!"
     assert item_locs.items == {

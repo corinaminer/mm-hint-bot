@@ -1,15 +1,12 @@
-import os
 import time
-
-import pytest
+from test.conftest import TEST_GUILD_ID
 
 from hint_data import DEFAULT_HINT_COOLDOWN_SEC
 from hint_times import HintTimes, hint_times_filename
 from item_locations import ItemLocations
 from utils import HintType, load
 
-test_guild_id = "test-guild-id"
-hint_times_fname = hint_times_filename(test_guild_id)
+hint_times_fname = hint_times_filename(TEST_GUILD_ID)
 
 serialized_items = {
     "kafeis mask": {
@@ -23,17 +20,8 @@ serialized_items = {
 }
 
 
-@pytest.fixture(autouse=True)
-def cleanup():
-    yield
-
-    for file in os.listdir():
-        if file.startswith(test_guild_id) and file.endswith(".json"):
-            os.remove(file)
-
-
 def test_hint_times_cooldown():
-    hint_times = HintTimes(test_guild_id)
+    hint_times = HintTimes(TEST_GUILD_ID)
     assert hint_times.get_cooldown(HintType.ITEM) == DEFAULT_HINT_COOLDOWN_SEC
 
     # run 2 hints, second should be denied
@@ -59,7 +47,7 @@ def test_hint_times_cooldown():
 
 
 def test_clear_past_hints():
-    hint_times = HintTimes(test_guild_id)
+    hint_times = HintTimes(TEST_GUILD_ID)
 
     hint_times.record_hint(1, 2, HintType.ITEM, "foo", ["bar"])
     assert hint_times.past_hints == {2: {HintType.ITEM: {"foo": ["bar"]}}}
