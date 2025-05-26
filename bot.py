@@ -11,6 +11,7 @@ from guild import Guild
 from hint_handler import (
     get_hint,
     get_hint_without_type,
+    get_show_checks_response,
     get_show_hints_response,
     infer_player_num,
 )
@@ -83,7 +84,7 @@ async def report_hint_result(hint_result: HintResult, ctx, guild):
                 hint_result.player_num, {}
             )
             await guild.message_tracker.edit_messages(
-                bot, hint_result.player_num, hint_result.hint_type, player_past_hints
+                bot, hint_result, player_past_hints
             )
     else:
         await ctx.send(hint_result.error)
@@ -150,7 +151,7 @@ async def hint_entrance(
 async def show_hints(
     ctx, player: Optional[int] = player_param, hint_type: str = hint_type_param
 ):
-    """Shows past hints redeemed for the given player. Infers player from author roles if not specified."""
+    """Shows past hints redeemed for the given player. Infers player number from author's roles if not specified."""
     hint_types: list[HintType] = get_hint_types(hint_type)
     if not len(hint_types):
         await ctx.send(f"Unrecognized hint type '{hint_type}'.")
@@ -160,11 +161,28 @@ async def show_hints(
             player_num = infer_player_num(player, ctx.author.roles)
             response = get_show_hints_response(player_num, hint_types, g.hint_times)
             message = await ctx.send(response)
-            g.message_tracker.track_message(
+            g.message_tracker.track_show_hints_message(
                 player_num, hint_type, ctx.channel.id, message.id
             )
         except ValueError as err:
             await ctx.send(err.args[0])
+
+
+@bot.command(name="show-checks")
+async def show_checks(ctx, player: Optional[int] = player_param):
+    """
+    Shows redeemed hints that point to checks in the given player's world. Infers player number from author's roles if not specified.
+    """
+    g = get_guild_data(ctx.guild.id)
+    try:
+        player_num = infer_player_num(player, ctx.author.roles)
+        response = get_show_checks_response(player_num, g.hint_times)
+        message = await ctx.send(response)
+        g.message_tracker.track_show_checks_message(
+            player_num, ctx.channel.id, message.id
+        )
+    except ValueError as err:
+        await ctx.send(err.args[0])
 
 
 @bot.command(name="search")

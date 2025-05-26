@@ -11,6 +11,7 @@ from utils import (
     HintType,
     SuccessfulHintResult,
     compose_show_hints_message,
+    curtail_message,
 )
 
 log = logging.getLogger(__name__)
@@ -52,6 +53,24 @@ def get_show_hints_response(
         hints_qualifier = "" if len(hint_types) > 1 else f"{hint_types[0].value} "
         return f"Player {player} has not even redeemed any {hints_qualifier}hints yet! :horse: :zzz:"
     return results
+
+
+def get_show_checks_response(player: int, hint_times: HintTimes) -> str:
+    response = ""
+    player_world_re = re.compile(f"^World {player} (.+)")
+    for other_player in hint_times.past_hints:
+        other_player_item_hints = hint_times.past_hints[other_player].get(
+            HintType.ITEM, {}
+        )
+        for hinted_item, results in other_player_item_hints.items():
+            for result in results:
+                player_world_match = player_world_re.match(result)
+                if player_world_match:
+                    location = player_world_match.group(1)
+                    response += f"- {location}: Player {other_player} {hinted_item}\n"
+    if len(response):
+        return curtail_message(response)
+    return "No redeemed hints have pointed to checks in your world yet."
 
 
 def get_hint_without_type(

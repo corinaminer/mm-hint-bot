@@ -60,9 +60,13 @@ def compose_show_hints_message(
             for hint_query, hint_results in player_past_hints[ht].items():
                 message += f"- {hint_query}: {", ".join(hint_results)}\n"
         if len(message) > DISCORD_MAX_MSG_LENGTH:
-            end_note = "\n...and more"
-            message = message[: DISCORD_MAX_MSG_LENGTH - len(end_note)] + end_note
             break
+    return curtail_message(message)
+
+
+def curtail_message(message, end_note="\n...and more"):
+    if len(message) > DISCORD_MAX_MSG_LENGTH:
+        message = message[: DISCORD_MAX_MSG_LENGTH - len(end_note)] + end_note
     return message
 
 
