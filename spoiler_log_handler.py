@@ -77,8 +77,10 @@ def handle_spoiler_log(
 
                 entrance_match = entrance_re.search(line)
                 if entrance_match:
+                    entrance_name = entrance_match.group(2).replace("MM ", "")
                     loc = entrance_match.group(6)
-                    if "_FROM_" in loc:
+                    if "Wallmaster" in entrance_name or "_FROM_" in loc:
+                        # Ignore locations reached by wallmaster pickup
                         # Assumes an entrance leading from X to Y will take you back to X if you return through it
                         continue
                     loc_name = LOCATION_NAME_REFORMATS.get(loc)
@@ -92,7 +94,6 @@ def handle_spoiler_log(
                             HintData.NAME_KEY: loc_name,
                             HintData.RESULTS_KEY: [[] for _ in range(player_count)],
                         }
-                    entrance_name = entrance_match.group(2).replace("MM ", "")
                     entrance_data[loc_key][HintData.RESULTS_KEY][current_world].append(
                         entrance_name
                     )

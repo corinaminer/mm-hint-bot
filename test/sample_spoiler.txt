@@ -14,6 +14,7 @@ Entrances
     MM Clock Tower Roof to MM Clock Tower Platform (MM_CLOCK_TOWN_FROM_CLOCK_TOWER_ROOF)                -> MM Woodfall Front of Temple from MM Woodfall Temple (MM_WOODFALL_FROM_TEMPLE)
     MM Woodfall Front of Temple to MM Woodfall Temple (MM_TEMPLE_WOODFALL)                              -> MM Clock Tower Roof from MM Clock Tower Platform (MM_CLOCK_TOWER_ROOF)
     MM Woodfall Temple to MM Woodfall Front of Temple (MM_WOODFALL_FROM_TEMPLE)                         -> MM Clock Tower Platform from MM Clock Tower Roof (MM_CLOCK_TOWN_FROM_CLOCK_TOWER_ROOF)
+    MM Beneath The Graveyard Night 3 Wallmaster to MM VOID (MM_WALLMASTER_DAMPE)                        -> MM Romani Ranch from MM Milk Road (MM_ROMANI_RANCH)
 
   World 2
     MM Clock Tower Platform to MM Clock Tower Roof (MM_CLOCK_TOWER_ROOF)                                -> MM Woodfall Temple from MM Woodfall Front of Temple (MM_TEMPLE_WOODFALL)
