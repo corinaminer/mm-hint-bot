@@ -29,6 +29,15 @@ IGNORED_ITEMS = {
     "Green Potion",
     "Ocean Skulltula Token",
     "Swamp Skulltula Token",
+    # OoT
+    "5 Arrows",
+    "20 Bombchu",
+    "Bomb",
+    "20 Bombs",
+    "5 Deku Nuts",
+    "5 Deku Seeds",
+    "30 Deku Seeds",
+    "Ice Trap",
 }
 
 LOCATION_NAME_REFORMATS = {

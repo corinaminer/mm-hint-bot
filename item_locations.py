@@ -34,6 +34,9 @@ def generate_item_aliases(item_key, item_name):
     no_poss = item_name.replace("'s ", " ")
     if no_poss != item_name:
         aliases.append(canonicalize(no_poss))
+    if "  " in item_key:
+        # OoT items like Silver Rupee (Spirit Temple - Child) have double spaces after removing the dash
+        aliases.append(item_key.replace("  ", " "))
     owl_match = owl_item_re.search(item_key)
     if owl_match:
         owl_aliases = get_owl_aliases(owl_match.group(1))
