@@ -17,14 +17,14 @@ players_re = re.compile(r"^ +players: (\d+)$")  # players: 14
 # MM Clock Tower Platform to MM Clock Tower Roof (MM_CLOCK_TOWER_ROOF)
 #     -> MM Stone Tower Temple from MM Stone Tower Front of Temple (MM_TEMPLE_STONE_TOWER)
 # (no line break)
-entrance_re = re.compile(r"^ +(MM )?(.+) \(([A-Z_]+)\) +-> (MM )?(.+) \(([A-Z_]+)\)$")
+entrance_re = re.compile(r"^ +(MM |OOT )?(.+) \(([A-Z_]+)\) +-> (MM |OOT )?(.+) \(([A-Z_]+)\)$")
 entrance_world_re = re.compile(r"^ +World (\d+)$")  # World 1
 
 loc_list_re = re.compile(r"^Location List \(\d+\)$")  # Location List (4410)
 loc_world_re = re.compile(r"^ +World (\d+) \(\d+\)$")  # World 1 (490)
 area_re = re.compile(r"^ +([^ ].+) \(\d+\):$")  # Tingle (6):
 # MM Woodfall Entrance Chest: Player 7 Postman's Hat
-loc_re = re.compile(r"^ {6}MM (.+): Player (\d+) ([^\n]+)$")
+loc_re = re.compile(r"^ {6}(MM|OOT) (.+): Player (\d+) ([^\n]+)$")
 
 
 class SpoilerStep(Enum):
@@ -77,7 +77,7 @@ def handle_spoiler_log(
 
                 entrance_match = entrance_re.search(line)
                 if entrance_match:
-                    entrance_name = entrance_match.group(2).replace("MM ", "")
+                    entrance_name = entrance_match.group(2).replace("MM ", "").replace("OOT ", "")
                     loc = entrance_match.group(6)
                     if "Wallmaster" in entrance_name or "_FROM_" in loc:
                         # Ignore locations reached by wallmaster pickup
@@ -85,7 +85,7 @@ def handle_spoiler_log(
                         continue
                     loc_name = LOCATION_NAME_REFORMATS.get(loc)
                     if loc_name is None:
-                        loc_words = loc.replace("MM_", "").split("_")
+                        loc_words = loc.replace("MM_", "").replace("OOT_", "").split("_")
                         loc_name = " ".join(w.capitalize() for w in loc_words)
                     loc_key = canonicalize(loc_name)
                     # Locations are 1:1 with entrances, but put each entrance in a list to conform with HintData format
@@ -125,11 +125,13 @@ def handle_spoiler_log(
 
                 loc_match = loc_re.search(line)
                 if loc_match:
-                    check_name = loc_match.group(1)
-                    player = loc_match.group(2)  # player who will receive the item
-                    item_name = loc_match.group(3)
+                    check_name = loc_match.group(2)
+                    player = loc_match.group(3)  # player who will receive the item
+                    item_name = loc_match.group(4)
                     if item_name.endswith(" (MM)"):
                         item_name = item_name[:-5]
+                    elif item_name.endswith(" (OoT)"):
+                        item_name = item_name[:-6]
 
                     # Add check to { check -> item } mapping
                     # Checks are 1:1 with items, but put each item in a list to conform with HintData format
